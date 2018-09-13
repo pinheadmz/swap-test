@@ -75,6 +75,8 @@ cb.addOutput({
   value: 50000
 });
 
+console.log('Swap funding TX:\n', cb);
+
 
 //  ---------------- REFUND TEST ----------------
 // Create our redeeming transaction.
@@ -106,8 +108,9 @@ const sigRefund = mtxRefund.signature(
 // Build sig script to spend from redeem script
 // `<Timmy signature> <0>`
 const inputRefund = new Script();
-inputRefund.setData(0, sigRefund);
+inputRefund.pushData(sigRefund);
 inputRefund.pushInt(0);
+inputRefund.pushData(output.toRaw());
 inputRefund.compile();
 console.log('Refund input script: ', inputRefund.toString());
 mtxRefund.inputs[0].script = inputRefund;
@@ -125,6 +128,8 @@ const txRefund = mtxRefund.toTX();
 console.log('REFUND TX Verify:  ', txRefund.verify(mtxRefund.view));
 
 
+
+/*
 //  ---------------- SWAP TEST ----------------
 // Create our redeeming transaction.
 const mtxSwap = new MTX();
@@ -156,6 +161,7 @@ const inputSwap = new Script();
 inputSwap.setData(0, sigSwap);
 inputSwap.pushData(secret);
 inputSwap.pushInt(1);
+inputRefund.pushData(output.toRaw());
 inputSwap.compile();
 console.log("Swap input script:   ", inputSwap.toString());
 mtxSwap.inputs[0].script = inputRefund;
@@ -164,10 +170,13 @@ mtxSwap.setLocktime(parseInt(TX_nLOCKTIME));
 
 // Check scripts and sigs
 console.log('Completed signed SWAP TX:\n', mtxSwap);
-console.log('SWAP MTX Verify: ', mtxSwap.verify(flags));
+console.log('SWAP MTX Verify:   ', mtxSwap.verify(flags));
 
 // Make tx immutable
 const txSwap = mtxSwap.toTX();
 
 // it should still verify (need mtx's coin view to verify tx)
 console.log('REFUND TX Verify:  ', txSwap.verify(mtxSwap.view));
+
+
+*/

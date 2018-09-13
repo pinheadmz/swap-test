@@ -43,8 +43,11 @@ const CLTV_LOCKTIME = 10;
 const TX_nLOCKTIME = 5;
 const flags = Script.flags.STANDARD_VERIFY_FLAGS;
 
-// Create BTC swap output (redeem) script
-// `OP_IF OP_SHA256 <H> OP_EQUALVERIFY <Chris public key> OP_CHECKSIGVERIFY OP_ELSE <locktime> OP_CHECKLOCKTIMEVERIFY <Timmy public key> OP_CHECKSIGVERIFY`
+// Create BTC swap output (redeem) script:
+// OP_IF
+//   OP_SHA256 <H> OP_EQUALVERIFY <Chris public key> OP_CHECKSIGVERIFY
+// OP_ELSE
+//   <locktime> OP_CHECKLOCKTIMEVERIFY <Timmy public key> OP_CHECKSIGVERIFY
 const output = new Script();
 output.pushSym('OP_IF');
 output.pushSym('OP_SHA256');
@@ -105,8 +108,8 @@ const sigRefund = mtxRefund.signature(
     version
   );
 
-// Build sig script to spend from redeem script
-// `<Timmy signature> <0>`
+// Build sig script to spend from redeem script:
+// <Timmy signature> <0>
 const inputRefund = new Script();
 inputRefund.pushData(sigRefund);
 inputRefund.pushInt(0);
@@ -155,8 +158,8 @@ const sigSwap = mtxSwap.signature(
     version
   );
 
-// Build sig script to spend from redeem script
-// `<Chris signature> <S> <1> `
+// Build sig script to spend from redeem script:
+// <Chris signature> <S> <1>
 const inputSwap = new Script();
 inputSwap.setData(0, sigSwap);
 inputSwap.pushData(secret);

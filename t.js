@@ -40,8 +40,10 @@ console.log("Output script: ", output.toString());
 // `<Timmy signature> <0>`
 const inputRefund = new Script();
 inputRefund.pushData(TimmyPubKey);
-inputRefund.pushInt(1);
+inputRefund.pushInt(0);
 inputRefund.compile();
+console.log("Refund input script: ", inputRefund.toString());
+
 
 // `<Chris signature> <S> <1> `
 const inputSwap = new Script();
@@ -49,7 +51,7 @@ inputSwap.pushData(ChrisPubKey);
 inputSwap.pushData(secret);
 inputSwap.pushInt(1);
 inputSwap.compile();
-
+console.log("Swap input script: ", inputSwap.toString());
 
 const stackRefund = new Stack();
 inputRefund.execute(stackRefund);

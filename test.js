@@ -1,8 +1,10 @@
 const Swap = require('./swap');
 const network = 'main';
 
+
+//const BCH = new Swap('bcash');
 const BTC = new Swap('bcoin');
-const BCH = new Swap('bcash');
+
 
 const CLTV_LOCKTIME = 10; // can't spend redeem until this height
 const TX_nLOCKTIME = 15;  // minimum height the spending tx can be mined
@@ -24,7 +26,7 @@ const fundingTX = BTC.getFundingTX(address, 50000);
 const refundScript = BTC.getRefundInputScript(redeemScript);
 
 const refundTX = BTC.getRedeemTX(
-  address,
+  Timmy.address,
   10000,
   fundingTX,
   0,
@@ -34,7 +36,13 @@ const refundTX = BTC.getRedeemTX(
   Timmy.privateKey
 );
 
-console.log(BTC.verifyMTX(refundTX));
+console.log('\naddress:\n', address);
+console.log('\nfundingTX:\n', fundingTX);
+console.log('\nrefundScript:\n', refundScript);
+console.log('\nrefundTX:\n', refundTX);
+
+
+console.log('\vVERIFY:\n', BTC.verifyMTX(refundTX));
 
 
 

@@ -14,6 +14,8 @@ const bcrypto = require('bcrypto');
 
 class Swap {
   constructor(lib){
+    this.lib = lib;
+
     const {
       Outpoint,
       Coin,
@@ -36,7 +38,7 @@ class Swap {
     this.Script = Script;
     this.Stack = Stack;
 
-    this.flags = Script.flags.STANDARD_VERIFY_FLAGS;
+    this.flags = this.Script.flags.STANDARD_VERIFY_FLAGS;
   }
 
 
@@ -65,7 +67,8 @@ class Swap {
 
     return {
       'publicKey': publicKey,
-      'privateKey': key.privateKey
+      'privateKey': key.privateKey,
+      'address': keyring.getAddress() // new addr for sweeping the swap
     }
   }
 
@@ -117,14 +120,14 @@ class Swap {
     return inputSwap;
   }
 
-  signInput(mtx, index, redeemScript, value, privateKey, sigHashType, version) {
+  signInput(mtx, index, redeemScript, value, privateKey, sigHashType, version_or_flags) {
     return mtx.signature(
       index,
       redeemScript,
       value,
       privateKey,
       sigHashType,
-      version
+      version_or_flags
     );
   }
 
@@ -164,14 +167,21 @@ class Swap {
     redeemTX.inputs[0].script = inputScript;
     redeemTX.setLocktime(parseInt(locktime));
 
+    let version_or_flags = 0;
+    let type = null;
+    if (this.lib === 'bcash') {
+      version_or_flags = this.flags;
+      type = this.Script.hashType.SIGHASH_FORKID | this.Script.hashType.ALL; 
+    }
+
     const sig = this.signInput(
       redeemTX,
       0,
       redeemScript,
       coin.value,
       privateKey,
-      null,
-      0
+      type,
+      version_or_flags
     );
 
     inputScript.setData(0, sig);

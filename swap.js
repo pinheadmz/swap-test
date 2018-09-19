@@ -6,65 +6,39 @@
 
 'use strict'
 
-const {
-  Outpoint,
-  Coin,
-  MTX,
-  TX,
-  Address,
-  ScriptNum,
-  hd,
-  KeyRing,
-  Script,
-  Stack
-} = require('bcoin');
 const bcrypto = require('bcrypto');
-const {NodeClient, WalletClient} = require('bclient');
 
 /**
  * Swap
  */
 
 class Swap {
+  constructor(lib){
+    const {
+      Outpoint,
+      Coin,
+      MTX,
+      TX,
+      Address,
+      hd,
+      KeyRing,
+      Script,
+      Stack
+    } = require(lib);
 
-  constructor(){
-    this.BTCnode = new NodeClient({
-      network: 'testnet',
-      port: 18332,
-      apiKey: 'api-key'
-    });
+    this.Outpoint = Outpoint;
+    this.Coin = Coin;
+    this.MTX = MTX;
+    this.TX = TX;
+    this.Address = Address;
+    this.hd = hd;
+    this.KeyRing = KeyRing;
+    this.Script = Script;
+    this.Stack = Stack;
 
-    this.BCHnode = new NodeClient({
-      network: 'testnet',
-      port: 18032,
-      apiKey: 'api-key'
-    });
-
-    this.BTCwalletClient = new WalletClient({
-      network: 'testnet',
-      port: 18334,
-      apiKey: 'api-key'
-    });
-
-    this.BCHwalletClient = new WalletClient({
-      network: 'testnet',
-      port: 18034,
-      apiKey: 'api-key'
-    });
-
-    this.BTCwallet = this.BTCwalletClient.wallet('primary');
-    this.BCHwallet = this.BCHwalletClient.wallet('primary');
+    this.flags = Script.flags.STANDARD_VERIFY_FLAGS;
   }
 
-  async nodeStatus() {
-    const BTCinfo = await this.BTCnode.getInfo();
-    const BCHinfo = await this.BCHnode.getInfo();
-
-    return {
-      'BTCnodeStatus': BTCinfo.chain,
-      'BCHnodeStatus': BCHinfo.chain
-    }
-  }
 
   getSecret(enc) {
     const secret = bcrypto.randomBytes(32);
@@ -84,19 +58,19 @@ class Swap {
   }
 
   getKeyPair(){
-    const master = hd.generate();
+    const master = this.hd.generate();
     const key = master.derivePath('m/44/0/0/0/0');
-    const keyring = KeyRing.fromPrivate(key.privateKey);
-    const publickey = keyring.publicKey;
+    const keyring = this.KeyRing.fromPrivate(key.privateKey);
+    const publicKey = keyring.publicKey;
 
     return {
-      'publickey': publickey,
-      'privatekey': key.privateKey
+      'publicKey': publicKey,
+      'privateKey': key.privateKey
     }
   }
 
   getRedeemScript(hash, refundPubkey, swapPubkey, locktime){
-    const redeem = new Script();
+    const redeem = new this.Script();
 
     redeem.pushSym('OP_IF');
     redeem.pushSym('OP_SHA256');
@@ -117,22 +91,22 @@ class Swap {
   }
 
   getAddressFromRedeemScript(redeemScript){
-    return Address.fromScripthash(redeemScript.hash160());
+    return this.Address.fromScripthash(redeemScript.hash160());
   }
 
   getRefundInputScript(redeemScript){
-    const inputRefund = new Script();
+    const inputRefund = new this.Script();
 
     inputRefund.pushInt(0); // signature placeholder
     inputRefund.pushInt(0);
-    inputRefund.pushData(redeem.toRaw());
+    inputRefund.pushData(redeemScript.toRaw());
     inputRefund.compile();
 
     return inputRefund;
   }
 
   getSwapInputScript(redeemScript, secret){
-    const inputSwap = new Script();
+    const inputSwap = new this.Script();
 
     inputSwap.pushInt(0); // signature placeholder
     inputSwap.pushData(secret);
@@ -161,19 +135,37 @@ class Swap {
     return inputScript;
   }
 
-  getRefundTX(address, coin, fee, redeemScript, inputRefund, privateKey, locktime){
-    const refundTX = new MTX();
-
-    refundTX.addOutput({
+  getFundingTX(address, value){
+    const cb = new this.MTX();
+    cb.addInput({
+      prevout: new this.Outpoint(),
+      script: new this.Script(),
+      sequence: 0xffffffff
+    });
+    cb.addOutput({
       address: address,
-      value: coin.value - fee;
-    })
-    refundTX.addCoin(coin);
-    refundTX.inputs[0].script = inputRefund;
-    refundTX.setLocktime(parseInt(locktime));
+      value: value
+    });
 
-    const sig = signInput(
-      refundTX,
+    return cb;
+  }
+
+  // works for both refund and swap
+  getRedeemTX(address, fee, fundingTX, fundingTXoutput, redeemScript, inputScript, locktime, privateKey){
+    const redeemTX = new this.MTX();
+
+    const coin = this.Coin.fromTX(fundingTX, fundingTXoutput, -1);
+
+    redeemTX.addOutput({
+      address: address,
+      value: coin.value - fee
+    })
+    redeemTX.addCoin(coin);
+    redeemTX.inputs[0].script = inputScript;
+    redeemTX.setLocktime(parseInt(locktime));
+
+    const sig = this.signInput(
+      redeemTX,
       0,
       redeemScript,
       coin.value,
@@ -182,13 +174,19 @@ class Swap {
       0
     );
 
-    inputRefund.setData(0, sig);
-    inputRefund.compile();
+    inputScript.setData(0, sig);
+    inputScript.compile();
 
-    const tx = refundTX.toTX();
-    return tx;
+    return redeemTX;
   }
 
+  verifyMTX(mtx){
+    return mtx.verify(this.flags)
+  }
+
+  verifyTX(tx, view){
+    return tx.verify(view);
+  }
 }
 
 

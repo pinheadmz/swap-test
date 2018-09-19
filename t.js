@@ -20,6 +20,8 @@ const flags = Script.flags.STANDARD_VERIFY_FLAGS;
 const CLTV_LOCKTIME = 10; // can't spend redeem until this height
 const TX_nLOCKTIME = 15;  // minimum height the spending tx can be mined 
 
+console.log('\n--- SETUP ---');
+
 // generate preimage and hash for hash-lock
 const secret = bcrypto.randomBytes(32);
 const hash = bcrypto.sha256.digest(secret);
@@ -42,6 +44,8 @@ const ChrisPubKey = ChrisKeyRing.publicKey;
 console.log('Timmy pub: ', TimmyPubKey);
 console.log('Chris pub: ', ChrisPubKey);
 
+console.log('\n--- FUND SWAP ---');
+
 // Create BTC swap redeem script:
 // OP_IF
 //   OP_SHA256 <H> OP_EQUALVERIFY <Chris public key> OP_CHECKSIG
@@ -62,9 +66,9 @@ redeem.pushData(TimmyPubKey);
 redeem.pushSym('OP_CHECKSIG');
 redeem.pushSym('OP_ENDIF');
 redeem.compile();
-// console.log('Output script:\n  ', redeem.toString());
+console.log('Output script:\n  ', redeem.toString());
 const addr = Address.fromScripthash(redeem.hash160());
-// console.log('BTC Address: ', addr.toString(NETWORK));
+console.log('BTC Address: ', addr.toString(NETWORK));
 
 // Create a fake coinbase for our funding
 // and send 50,000 satoshis to the swap address.
@@ -78,10 +82,10 @@ cb.addOutput({
   address: addr,
   value: 50000
 });
-// console.log('Swap funding TX:\n', cb);
+console.log('Swap funding TX:\n', cb);
 
 
-//  ---------------- REFUND TEST ----------------
+console.log('\n--- REFUND TEST ---');
 // Create our redeeming transaction.
 const mtxRefund = new MTX();
 
@@ -103,7 +107,7 @@ inputRefund.pushInt(0); // <-- signature placeholder!
 inputRefund.pushInt(0);
 inputRefund.pushData(redeem.toRaw());
 inputRefund.compile();
-// console.log('Refund input script: ', inputRefund.toString());
+console.log('Unsigned refund input script: ', inputRefund.toString());
 mtxRefund.inputs[0].script = inputRefund;
 
 // set nLocktime for spending tx (after swap period expires)
@@ -124,21 +128,21 @@ const sigRefund = mtxRefund.signature(
 // add signature to input script
 inputRefund.setData(0, sigRefund);
 inputRefund.compile();
-// console.log('Signed refund input script: ', inputRefund.toString());
+console.log('Signed refund input script: ', inputRefund.toString());
 
 // Check scripts and sigs
-// console.log('Completed signed REFUND TX:\n', mtxRefund);
+console.log('Completed signed REFUND TX:\n', mtxRefund);
 console.log('REFUND MTX Verify: ', mtxRefund.verify(flags));
 
 // Make tx immutable
-//const txRefund = mtxRefund.toTX();
+const txRefund = mtxRefund.toTX();
 
 // it should still verify (need mtx's coin view to verify tx)
-//// console.log('REFUND TX Verify:  ', txRefund.verify(mtxRefund.view));
+console.log('REFUND TX Verify:  ', txRefund.verify(mtxRefund.view));
 
 
 
-//  ---------------- SWAP TEST ----------------
+console.log('\n--- SWAP TEST ---');
 // Create our redeeming transaction.
 const mtxSwap = new MTX();
 
@@ -160,7 +164,7 @@ inputSwap.pushData(secret);
 inputSwap.pushInt(1);
 inputSwap.pushData(redeem.toRaw());
 inputSwap.compile();
-// console.log("Swap input script:   ", inputSwap.toString());
+console.log("Unsigned swap input script:   ", inputSwap.toString());
 mtxSwap.inputs[0].script = inputSwap;
 
 // Sign the input with Chris's private key
@@ -177,15 +181,15 @@ const sigSwap = mtxSwap.signature(
 // add signature to input
 inputSwap.setData(0, sigSwap);
 inputSwap.compile();
-// console.log('Signed swap input script: ', inputSwap.toString());
+console.log('Signed swap input script: ', inputSwap.toString());
 
 // Check scripts and sigs
-// console.log('Completed signed SWAP TX:\n', mtxSwap);
+console.log('Completed signed SWAP TX:\n', mtxSwap);
 console.log('SWAP MTX Verify:   ', mtxSwap.verify(flags));
 
 // Make tx immutable
-//const txSwap = mtxSwap.toTX();
+const txSwap = mtxSwap.toTX();
 
 // it should still verify (need mtx's coin view to verify tx)
-// console.log('REFUND TX Verify:  ', txSwap.verify(mtxSwap.view));
+console.log('REFUND TX Verify:  ', txSwap.verify(mtxSwap.view));
 

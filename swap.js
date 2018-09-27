@@ -1,4 +1,4 @@
-/*!
+  /*!
  * swap.js - cross-chain atomic swap manager for the bcoin family
  * Copyright (c) 2018, The bcoin Developers (MIT License)
  * https://github.com/bcoin-org/bcoin
@@ -68,7 +68,7 @@ class Swap {
     return {
       'publicKey': publicKey,
       'privateKey': key.privateKey,
-      'address': keyring.getAddress() // new addr for sweeping the swap
+      'address': keyring.getAddress()
     }
   }
 
@@ -114,7 +114,7 @@ class Swap {
     inputSwap.pushInt(0); // signature placeholder
     inputSwap.pushData(secret);
     inputSwap.pushInt(1);
-    inputSwap.pushData(redeem.toRaw());
+    inputSwap.pushData(redeemScript.toRaw());
     inputSwap.compile();
 
     return inputSwap;

@@ -1,95 +1,65 @@
 const Swap = require('./swap');
 const network = 'main';
 
+function testSwapLib(lib) {
+  console.log('\n -- testing: ', lib)
 
-//const BCH = new Swap('bcash');
-const BTC = new Swap('bcoin');
+  const swap = new Swap(lib);
 
+  const CLTV_LOCKTIME = 10; // can't spend redeem until this height
+  const TX_nLOCKTIME = 15;  // minimum height the spending tx can be mined
+  const secret = swap.getSecret();
+  const Timmy = swap.getKeyPair();
+  const Chris = swap.getKeyPair();
 
-const CLTV_LOCKTIME = 10; // can't spend redeem until this height
-const TX_nLOCKTIME = 15;  // minimum height the spending tx can be mined
-const secret = BTC.getSecret();
-const Timmy = BTC.getKeyPair();
-const Chris = BTC.getKeyPair();
+  console.log('Timmy:\n', Timmy, '\nChris:\n', Chris);
 
-const redeemScript = BTC.getRedeemScript(
-  secret.hash,
-  Timmy.publicKey,
-  Chris.publicKey,
-  CLTV_LOCKTIME
-);
+  const redeemScript = swap.getRedeemScript(
+    secret.hash,
+    Timmy.publicKey,
+    Chris.publicKey,
+    CLTV_LOCKTIME
+  );
 
-const address = BTC.getAddressFromRedeemScript(redeemScript);
+  const address = swap.getAddressFromRedeemScript(redeemScript);
 
-const fundingTX = BTC.getFundingTX(address, 50000);
+  console.log('Swap P2SH scriptPubKey:\n', redeemScript.hash160().toString('hex'));
+  console.log('Swap P2SH address:\n', address);
 
-const refundScript = BTC.getRefundInputScript(redeemScript);
+  const fundingTX = swap.getFundingTX(address, 50000);
 
-const refundTX = BTC.getRedeemTX(
-  Timmy.address,
-  10000,
-  fundingTX,
-  0,
-  redeemScript,
-  refundScript,
-  TX_nLOCKTIME,
-  Timmy.privateKey
-);
+  const refundScript = swap.getRefundInputScript(redeemScript);
 
-console.log('\naddress:\n', address);
-console.log('\nfundingTX:\n', fundingTX);
-console.log('\nrefundScript:\n', refundScript);
-console.log('\nrefundTX:\n', refundTX);
+  const refundTX = swap.getRedeemTX(
+    Timmy.address,
+    10000,
+    fundingTX,
+    0,
+    redeemScript,
+    refundScript,
+    TX_nLOCKTIME,
+    Timmy.privateKey
+  );
 
+  console.log('\nREFUND VERIFY:\n', swap.verifyMTX(refundTX));
 
-console.log('\vVERIFY:\n', BTC.verifyMTX(refundTX));
+  const swapScript = swap.getSwapInputScript(redeemScript, secret.secret);
 
+  const refundTX2 = swap.getRedeemTX(
+    Chris.address,
+    10000,
+    fundingTX,
+    0,
+    redeemScript,
+    swapScript,
+    TX_nLOCKTIME,
+    Chris.privateKey
+  );
 
-
-
-
-
-
-
-
-/*
-const {NodeClient, WalletClient} = require('bclient');
-
-
-this.BTCnode = new NodeClient({
-  network: 'testnet',
-  port: 18332,
-  apiKey: 'api-key'
-});
-
-this.BCHnode = new NodeClient({
-  network: 'testnet',
-  port: 18032,
-  apiKey: 'api-key'
-});
-
-this.BTCwalletClient = new WalletClient({
-  network: 'testnet',
-  port: 18334,
-  apiKey: 'api-key'
-});
-
-this.BCHwalletClient = new WalletClient({
-  network: 'testnet',
-  port: 18034,
-  apiKey: 'api-key'
-});
-
-this.BTCwallet = this.BTCwalletClient.wallet('primary');
-this.BCHwallet = this.BCHwalletClient.wallet('primary');
-
-async nodeStatus() {
-  const BTCinfo = await this.BTCnode.getInfo();
-  const BCHinfo = await this.BCHnode.getInfo();
-
-  return {
-    'BTCnodeStatus': BTCinfo.chain,
-    'BCHnodeStatus': BCHinfo.chain
-  }
+  console.log('\nSWAP VERIFY:\n', swap.verifyMTX(refundTX2));
 }
-*/
+
+const libs = ['bcoin', 'bcash'];
+for (const lib of libs){
+  testSwapLib(lib);
+}

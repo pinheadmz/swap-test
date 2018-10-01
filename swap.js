@@ -1,8 +1,8 @@
-  /*!
- * swap.js - cross-chain atomic swap manager for the bcoin family
- * Copyright (c) 2018, The bcoin Developers (MIT License)
- * https://github.com/bcoin-org/bcoin
- */
+/*!
+* swap.js - cross-chain atomic swap manager for the bcoin family
+* Copyright (c) 2018, The bcoin Developers (MIT License)
+* https://github.com/bcoin-org/bcoin
+*/
 
 'use strict'
 
@@ -120,7 +120,15 @@ class Swap {
     return inputSwap;
   }
 
-  signInput(mtx, index, redeemScript, value, privateKey, sigHashType, version_or_flags) {
+  signInput(
+    mtx,
+    index,
+    redeemScript,
+    value,
+    privateKey,
+    sigHashType,
+    version_or_flags
+  ) {
     return mtx.signature(
       index,
       redeemScript,
@@ -154,7 +162,16 @@ class Swap {
   }
 
   // works for both refund and swap
-  getRedeemTX(address, fee, fundingTX, fundingTXoutput, redeemScript, inputScript, locktime, privateKey){
+  getRedeemTX(
+    address,
+    fee,
+    fundingTX,
+    fundingTXoutput,
+    redeemScript,
+    inputScript,
+    locktime,
+    privateKey
+  ){
     const redeemTX = new this.MTX();
 
     const coin = this.Coin.fromTX(fundingTX, fundingTXoutput, -1);

@@ -1,3 +1,8 @@
+/*
+* Tests all the swap.js functions against multiple blockchain libraries
+*/
+
+
 const Swap = require('./swap');
 const network = 'main';
 
@@ -23,7 +28,10 @@ function testSwapLib(lib) {
 
   const address = swap.getAddressFromRedeemScript(redeemScript);
 
-  console.log('Swap P2SH scriptPubKey:\n', redeemScript.hash160().toString('hex'));
+  console.log(
+    'Swap P2SH scriptPubKey:\n',
+    redeemScript.hash160().toString('hex')
+  );
   console.log('Swap P2SH address:\n', address);
 
   const fundingTX = swap.getFundingTX(address, 50000);

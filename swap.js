@@ -1,5 +1,5 @@
 /*!
-* swap.js - cross-chain atomic swap manager for the bcoin family
+* swap.js - cross-chain atomic swap manager for the bcoin family.
 * Copyright (c) 2018, The bcoin Developers (MIT License)
 * https://github.com/bcoin-org/bcoin
 */

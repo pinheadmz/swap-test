@@ -1,7 +1,6 @@
 /*
-* Tests all the swap.js functions against multiple blockchain libraries
+* Tests all the swap.js functions against multiple blockchain libraries.
 */
-
 
 const Swap = require('./swap');
 const network = 'main';

@@ -2,11 +2,11 @@
 * Tests the swap.js functions on active testnet:
 * Script will output a funding address and wait for
 * incoming tx to that address, then react immediately
-* with the specified redeem transaction
+* with the specified redeem transaction, all on one chain only.
 */
 
 // set these for each test -------!!
-const lib = 'bcoin';    // bcoin, bcash, hsd
+const lib = 'bcoin';    // bcoin, bcash
 const mode = 'refund';  // refund, swap
 // -------------------------------!!
 

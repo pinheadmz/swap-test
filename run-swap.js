@@ -1,6 +1,7 @@
-/*
-* Run cross-chain atomic swap!
-*/
+/*!
+ * Run cross-chain atomic swap.
+ * WARNING: Running this script will send transactions and spend coins!
+ */
 
 // Requirements
 const {NodeClient, WalletClient} = require('bclient');
@@ -19,9 +20,21 @@ const theirs = config.str('theirs');
 const have = config.str('have');
 const want = config.str('want');
 const mode = config.str('mode');
+const amount = config.uint('amount');
 // Optional arguments with defaults
-const gracePeriod = config.uint('gracePeriod', 10);
+const swapTime = config.uint('swap-time', 6);
+const cancelTime = config.uint('cancel-time', 100);
+const feeRate = config.uint('rate', 1000);
 const network = config.str('network', 'testnet');
+
+// Quick usage check
+if (!mine || !theirs || !have || !want || !mode || !amount)
+  err(
+    'Usage:\n' +
+    '  node run-swap.js --mine=<prep-swap PRIVATE output> \\ \n' +
+    '  --theirs=<prep-swap PUBLIC from counterparty> \\ \n' +
+    '  --have=<bcoin|bcash> --want=<bcoin|bcash> \\ \n' +
+    '  --amount=<in satoshis>');
 
 // Convert base58 strings back into JSON objects
 const myObject = JSON.parse(base58.decode(mine));
@@ -29,46 +42,47 @@ const theirObject = JSON.parse(base58.decode(theirs));
 
 // Check all the parameters in the base58-encoded JSON objects
 if (typeof(myObject.privateKey) !== 'string'
-  || typeof(myObject.publicKey) !== 'string')
-  || typeof(myObject.secret) !== 'string')
-  || typeof(myObject.hash) !== 'string'){
-  throw new Error ('Bad mine');
+    || typeof(myObject.secret) !== 'string') {
+  err ('Bad mine');
 }
 
 if (myObject.privateKey.length !== 64)
-  throw new Error ('Bad mine: privateKey size');
-  
-if (myObject.publicKey.length !== 66)
-  throw new Error ('Bad mine: publicKey size');  
+  err ('Bad mine: privateKey size');
 
 if (myObject.secret.length !== 64)
-  throw new Error ('Bad mine: secret size');  
-
-if (myObject.hash.length !== 64)
-  throw new Error ('Bad mine: hash size');
+  err ('Bad mine: secret size');  
 
 if (typeof(theirObject.publicKey) !== 'string'
-  || typeof(theirObject.hash) !== 'string'){
-  throw new Error ('Bad theirs');
+    || typeof(theirObject.hash) !== 'string') {
+  err ('Bad theirs');
 }
 
 if (theirObject.publicKey.length !== 66)
-  throw new Error ('Bad theirs: publicKey size');
+  err ('Bad theirs: publicKey size');
 
 if (theirObject.hash.length !== 64)
-  throw new Error ('Bad theirs: hash size');
+  err ('Bad theirs: hash size');
 
 const supportedLibs = ['bcoin', 'bcash'];
 if (supportedLibs.indexOf(have) === -1
     || supportedLibs.indexOf(want) === -1
-    || have === want){
-  throw new Error('Bad have / want');
+    || have === want) {
+  err('Bad have / want: must be different, "bcoin" or "bcash"');
 }
 
 const supportedModes = ['start', 'refund', 'swap'];
 if (supportedModes.indexOf(mode) === -1) {
-  throw new Error('Bad mode');
+  err('Bad mode: must be "start" "refund" or "swap"');
 }
+
+// Load blockchain libraries
+const haveSwap = new Swap(have);
+const wantSwap = new Swap(want);
+
+// Derive the necessary public strings from privates
+// using the "have" library here but it could be either for this step
+myObject.publicKey = haveSwap.getKeyPair(myObject.privateKey).publicKey;
+myObject.hash = haveSwap.getSecret(myObject.secret).hash;
 
 // Setup clients
 const ports = {
@@ -77,7 +91,7 @@ const ports = {
 }
 
 const haveClient = new NodeClient({
-  network: network
+  network: network,
   port: ports[have].nodePort,
   apiKey: 'api-key'
 });
@@ -89,7 +103,7 @@ const haveWallet = new WalletClient({
 });
 
 const wantClient = new NodeClient({
-  network: network
+  network: network,
   port: ports[want].nodePort,
   apiKey: 'api-key'
 });
@@ -100,23 +114,21 @@ const wantWallet = new WalletClient({
   apiKey: 'api-key'
 });
 
-// Load blockchain libraries
-const haveSwap = new Swap(have);
-const wantSwap = new Swap(want);
-
 switch (mode){
-  // Initiate the swap by funding the HTLC address on "my" chain
+  // ** START ** Initiate the swap by funding the HTLC address on "my" chain
   case 'start': {
-    let redeemScript, address, CLTV_LOCKTIME, TX_nLOCKTIME;
+    // Initialize variables we also need in the event listener
+    let refundScript, address, CLTV_LOCKTIME, TX_nLOCKTIME;
 
     (async () => {
+      // Calculate locktimes
       const clientinfo = await haveClient.getInfo();
       const currentHeight = clientinfo.chain.height;
 
-      // Can't spend redeem until this height
-      CLTV_LOCKTIME = currentHeight;
-      // Minimum height the refund tx can be mined
-      TX_nLOCKTIME = currentHeight + gracePeriod;
+      // Can't spend UTXO until this height
+      CLTV_LOCKTIME = currentHeight  + cancelTime;
+      // Minimum height the funding tx can be mined (immediately)
+      TX_nLOCKTIME = currentHeight;
 
       // Build the P2SH address with the HTLC script
       redeemScript = haveSwap.getRedeemScript(
@@ -131,8 +143,11 @@ switch (mode){
 
       console.log('Swap P2SH address:\n', address);
       
-      // TODO: fund swap address from primary wallet and report
-      console.log('Swap-funding TX:\n', fundingTX);
+      // Fund swap address from primary wallet and report
+
+
+
+     // console.log('Swap-funding TX:\n', fundingTX);
 
       // TODO: Create a wallet on the "want" chain to watch for secret
       
@@ -141,11 +156,11 @@ switch (mode){
 
     break;
   }
+}
 
-
-
-
-
+function err(msg){
+  console.log(msg);
+  process.exit();
 }
 
 

@@ -1,8 +1,8 @@
 /*!
-* swap.js - cross-chain atomic swap manager for the bcoin family.
-* Copyright (c) 2018, The bcoin Developers (MIT License)
-* https://github.com/bcoin-org/bcoin
-*/
+ * swap.js - cross-chain atomic swap manager for the bcoin family.
+ * Copyright (c) 2018, The bcoin Developers (MIT License)
+ * https://github.com/bcoin-org/bcoin
+ */
 
 'use strict'
 
@@ -10,6 +10,7 @@ const bcrypto = require('bcrypto');
 
 /**
  * Swap
+ *  
  */
 
 class Swap {
@@ -25,7 +26,8 @@ class Swap {
       hd,
       KeyRing,
       Script,
-      Stack
+      Stack,
+      consensus
     } = require(lib);
 
     this.Outpoint = Outpoint;
@@ -37,43 +39,60 @@ class Swap {
     this.KeyRing = KeyRing;
     this.Script = Script;
     this.Stack = Stack;
+    this.consensus = consensus;
 
     this.flags = this.Script.flags.STANDARD_VERIFY_FLAGS;
   }
 
+  /**
+   * Generate a random secret and derive its hash
+   * or pass a pre-generated secret to just get the hash
+   */
 
-  getSecret(enc) {
-    const secret = bcrypto.randomBytes(32);
+  getSecret(secret) {
+    if (!secret)
+      secret = bcrypto.randomBytes(32);
+    else
+      secret = ensureBuffer(secret);
+
     const hash = bcrypto.sha256.digest(secret);
 
-    if (enc == 'hex'){
-      return {
-        'secret': secret.toString('hex'),
-        'hash': hash.toString('hex')
-      }
-    } else {
-      return {
-        'secret': secret,
-        'hash': hash
-      }
+    return {
+      'secret': secret,
+      'hash': hash
     }
   }
 
-  getKeyPair(){
-    const master = this.hd.generate();
-    const key = master.derivePath('m/44/0/0/0/0');
-    const keyring = this.KeyRing.fromPrivate(key.privateKey);
+  /**
+   * Generate a private / public key pair
+   * or pass a pre-generated private key to just get the public key
+   */
+
+  getKeyPair(privateKey){
+    if (!privateKey) {
+      const master = this.hd.generate();
+      const key = master.derivePath('m/44/0/0/0/0');
+      privateKey = key.privateKey;
+    } else {
+      privateKey = ensureBuffer(privateKey);
+    }
+    const keyring = this.KeyRing.fromPrivate(privateKey);
     const publicKey = keyring.publicKey;
 
     return {
       'publicKey': publicKey,
-      'privateKey': key.privateKey,
+      'privateKey': privateKey,
       'address': keyring.getAddress()
     }
   }
 
   getRedeemScript(hash, refundPubkey, swapPubkey, locktime){
     const redeem = new this.Script();
+    const CSVlocktime = this.CSVencode(parseInt(locktime), true);
+
+    hash = ensureBuffer(hash);
+    refundPubkey = ensureBuffer(refundPubkey);
+    swapPubkey = ensureBuffer(swapPubkey);
 
     redeem.pushSym('OP_IF');
     redeem.pushSym('OP_SHA256');
@@ -82,8 +101,8 @@ class Swap {
     redeem.pushData(swapPubkey);
     redeem.pushSym('OP_CHECKSIG');
     redeem.pushSym('OP_ELSE');
-    redeem.pushInt(locktime);
-    redeem.pushSym('OP_CHECKLOCKTIMEVERIFY');
+    redeem.pushInt(CSVlocktime);
+    redeem.pushSym('OP_CHECKSEQUENCEVERIFY');
     redeem.pushSym('OP_DROP');
     redeem.pushData(refundPubkey);
     redeem.pushSym('OP_CHECKSIG');
@@ -111,6 +130,8 @@ class Swap {
   getSwapInputScript(redeemScript, secret){
     const inputSwap = new this.Script();
 
+    secret = ensureBuffer(secret);
+
     inputSwap.pushInt(0); // signature placeholder
     inputSwap.pushData(secret);
     inputSwap.pushInt(1);
@@ -129,6 +150,9 @@ class Swap {
     sigHashType,
     version_or_flags
   ) {
+
+    privateKey = ensureBuffer(privateKey);
+
     return mtx.signature(
       index,
       redeemScript,
@@ -173,8 +197,8 @@ class Swap {
     privateKey
   ){
     const redeemTX = new this.MTX();
-
     const coin = this.Coin.fromTX(fundingTX, fundingTXoutput, -1);
+    privateKey = ensureBuffer(privateKey);
 
     redeemTX.addOutput({
       address: address,
@@ -182,7 +206,8 @@ class Swap {
     })
     redeemTX.addCoin(coin);
     redeemTX.inputs[0].script = inputScript;
-    redeemTX.setLocktime(parseInt(locktime));
+    redeemTX.setSequence(0, parseInt(locktime), true);
+    redeemTX.version = 2; // for CSV
 
     let version_or_flags = 0;
     let type = null;
@@ -214,8 +239,46 @@ class Swap {
   verifyTX(tx, view){
     return tx.verify(view);
   }
+
+  extractSecret(tx, redeemScript){
+    for (const input of tx.inputs){
+      if (!input.redeem === redeemScript)
+        continue;
+      return input.script.code[1].data;
+    }
+  }
+
+  /* Whereas CLTV takes a regular number (blocks/seconds) as its argument,
+   * CSV has a special encoding format for both the script and the tx input
+   * This function is modified from bcoin/lib/primitives/mtx.js setSequence()
+   */
+
+  CSVencode(locktime, seconds) {
+    if((locktime >>> 0) !== locktime)
+      throw new Error('Locktime must be a uint32.');
+
+    if (seconds) {
+      locktime >>>= this.consensus.SEQUENCE_GRANULARITY;
+      locktime &= this.consensus.SEQUENCE_MASK;
+      locktime |= this.consensus.SEQUENCE_TYPE_FLAG;
+    } else {
+      locktime &= this.consensus.SEQUENCE_MASK;
+    }
+
+    return locktime;
+  }
 }
 
+/*
+ * Utility
+ */
+
+function ensureBuffer(string){
+  if (Buffer.isBuffer(string))
+    return string;
+  else
+    return new Buffer(string, 'hex');
+}
 
 /*
  * Expose

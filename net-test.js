@@ -1,13 +1,13 @@
-/*
-* Tests the swap.js functions on active testnet:
-* Script will output a funding address and wait for
-* incoming tx to that address, then react immediately
-* with the specified redeem transaction, all on one chain only.
-*/
+/*!
+ * Tests the swap.js functions on active testnet:
+ * Script will output a funding address and wait for
+ * incoming tx to that address, then react immediately
+ * with the specified redeem transaction, all on one chain only.
+ */
 
 // set these for each test -------!!
-const lib = 'bcoin';    // bcoin, bcash
-const mode = 'refund';  // refund, swap
+const lib = 'bcash';    // bcoin, bcash
+const mode = 'swap';  // refund, swap
 // -------------------------------!!
 
 const {NodeClient, WalletClient} = require('bclient');
@@ -44,7 +44,7 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nLOCKTIME;
   console.log('Current chain height:\n', currentHeight);
 
   CLTV_LOCKTIME = currentHeight; // can't spend redeem until this height
-  TX_nLOCKTIME = currentHeight;  // minimum height the spending tx can be mined
+  TX_nLOCKTIME = currentHeight;  // minimum height the funding tx can be mined
 
   console.log('Timmy:\n', Timmy, '\nChris:\n', Chris);
 

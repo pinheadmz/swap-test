@@ -1,6 +1,6 @@
 /*
-* Create parameters for swap
-*/
+ * Create parameters for swap
+ */
 
 const {base58} = require('bstring');
 const Swap = require('./swap');
@@ -15,9 +15,7 @@ const pub = {
 };
 const priv = {
   secret: secret.secret.toString('hex'),
-  hash: secret.hash.toString('hex'),
-  privateKey: keys.privateKey.toString('hex')
-  publicKey: keys.publicKey.toString('hex')
+  privateKey: keys.privateKey.toString('hex'),
 };
 
 const pubBase58 = base58.encode(new Buffer(JSON.stringify(pub)));

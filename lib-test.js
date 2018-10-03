@@ -10,8 +10,11 @@ function testSwapLib(lib) {
 
   const swap = new Swap(lib);
 
-  const CSV_LOCKTIME = swap.CSVencode(10, true); // can't spend redeem until this height
-  const TX_nSEQUENCE = swap.CSVencode(15, true);  // minimum height the spending tx can be mined
+  const hour = 60 * 60;
+  const day = hour * 24;
+  const CSV_LOCKTIME = 1 * hour; // can't spend redeem until this time
+  const TX_nSEQUENCE = 2 * hour; // minimum time the spending tx can be mined
+
   const secret = swap.getSecret();
   const Timmy = swap.getKeyPair();
   const Chris = swap.getKeyPair();
@@ -27,10 +30,6 @@ function testSwapLib(lib) {
 
   const address = swap.getAddressFromRedeemScript(redeemScript);
 
-  console.log(
-    'Swap P2SH scriptPubKey:\n',
-    redeemScript.hash160().toString('hex')
-  );
   console.log('Swap P2SH address:\n', address.toString(network));
 
   const fundingTX = swap.getFundingTX(address, 50000);
@@ -68,7 +67,6 @@ function testSwapLib(lib) {
   const extractedSecret = swap.extractSecret(swapTX);
   console.log('\nExtracted HTLC secret:\n', extractedSecret);
   console.log('Secret match:\n', extractedSecret == secret.secret);
-
 }
 
 const libs = ['bcoin', 'bcash'];

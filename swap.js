@@ -42,6 +42,7 @@ class Swap {
     this.consensus = consensus;
 
     this.flags = this.Script.flags.STANDARD_VERIFY_FLAGS;
+    this.CSV_seconds = true;
   }
 
   /**
@@ -88,7 +89,7 @@ class Swap {
 
   getRedeemScript(hash, refundPubkey, swapPubkey, locktime){
     const redeem = new this.Script();
-    const CSVlocktime = this.CSVencode(parseInt(locktime), true);
+    locktime = this.CSVencode(locktime, this.CSV_seconds);
 
     hash = ensureBuffer(hash);
     refundPubkey = ensureBuffer(refundPubkey);
@@ -101,7 +102,7 @@ class Swap {
     redeem.pushData(swapPubkey);
     redeem.pushSym('OP_CHECKSIG');
     redeem.pushSym('OP_ELSE');
-    redeem.pushInt(CSVlocktime);
+    redeem.pushInt(locktime);
     redeem.pushSym('OP_CHECKSEQUENCEVERIFY');
     redeem.pushSym('OP_DROP');
     redeem.pushData(refundPubkey);
@@ -206,8 +207,7 @@ class Swap {
     })
     redeemTX.addCoin(coin);
     redeemTX.inputs[0].script = inputScript;
-    redeemTX.setSequence(0, parseInt(locktime), true);
-    redeemTX.version = 2; // for CSV
+    redeemTX.setSequence(0, locktime, this.CSV_seconds);
 
     let version_or_flags = 0;
     let type = null;
@@ -254,19 +254,21 @@ class Swap {
    */
 
   CSVencode(locktime, seconds) {
-    if((locktime >>> 0) !== locktime)
+    let locktimeUint32 = locktime >>> 0;
+    if(locktimeUint32 !== locktime)
       throw new Error('Locktime must be a uint32.');
 
     if (seconds) {
-      locktime >>>= this.consensus.SEQUENCE_GRANULARITY;
-      locktime &= this.consensus.SEQUENCE_MASK;
-      locktime |= this.consensus.SEQUENCE_TYPE_FLAG;
+      locktimeUint32 >>>= this.consensus.SEQUENCE_GRANULARITY;
+      locktimeUint32 &= this.consensus.SEQUENCE_MASK;
+      locktimeUint32 |= this.consensus.SEQUENCE_TYPE_FLAG;
     } else {
-      locktime &= this.consensus.SEQUENCE_MASK;
+      locktimeUint32 &= this.consensus.SEQUENCE_MASK;
     }
 
-    return locktime;
+    return locktimeUint32;
   }
+
 }
 
 /*

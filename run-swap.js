@@ -22,8 +22,8 @@ const want = config.str('want');
 const mode = config.str('mode');
 const amount = config.uint('amount');
 // Optional arguments with defaults
-const swapTime = config.uint('swap-time', 6);
-const cancelTime = config.uint('cancel-time', 100);
+const swapTime = config.uint('swap-time', 60 * 60); // 1 hour to swap
+const cancelTime = config.uint('cancel-time', 60 * 60 * 24); // 1 day to cancel
 const feeRate = config.uint('rate', 1000);
 const network = config.str('network', 'testnet');
 
@@ -124,7 +124,7 @@ switch (mode){
       // Calculate locktimes
       const clientinfo = await haveClient.getInfo();
       const currentHeight = clientinfo.chain.height;
-
+      // TODO switch to TIME
       // Can't spend UTXO until this height
       CLTV_LOCKTIME = currentHeight  + cancelTime;
       // Minimum height the funding tx can be mined (immediately)

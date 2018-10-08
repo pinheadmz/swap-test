@@ -27,7 +27,8 @@ class Swap {
       KeyRing,
       Script,
       Stack,
-      consensus
+      consensus,
+      util
     } = require(lib);
 
     this.Outpoint = Outpoint;
@@ -40,6 +41,7 @@ class Swap {
     this.Script = Script;
     this.Stack = Stack;
     this.consensus = consensus;
+    this.util = util;
 
     this.flags = this.Script.flags.STANDARD_VERIFY_FLAGS;
     this.CSV_seconds = true;
@@ -240,12 +242,16 @@ class Swap {
     return tx.verify(view);
   }
 
-  extractSecret(tx, redeemScript){
-    for (const input of tx.inputs){
-      if (!input.redeem === redeemScript)
+  extractSecret(tx, address){
+    for (const output of tx.output){
+      if (!output.address === address)
         continue;
-      return input.script.code[1].data;
+      return output.value;
     }
+  }
+
+  extractAmount(tx, address){
+
   }
 
   /* Whereas CLTV takes a regular number (blocks/seconds) as its argument,

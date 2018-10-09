@@ -242,16 +242,24 @@ class Swap {
     return tx.verify(view);
   }
 
-  extractSecret(tx, address){
-    for (const output of tx.output){
-      if (!output.address === address)
+  extractSecret(tx, redeemScript){
+    for (const input of tx.inputs){
+      if (input.redeem !== redeemScript)
         continue;
-      return output.value;
+      return input.script.code[1].data;
     }
   }
 
-  extractAmount(tx, address){
-
+  extractOutput(tx, address, network) {
+    for (let i = 0; i < tx.outputs.length; i++) {
+      const output = tx.outputs[i].getJSON(network);
+      if (output.address === address.toString(network)) {
+        return {
+          index: i,
+          amount: output.value
+        }
+      }
+    }
   }
 
   /* Whereas CLTV takes a regular number (blocks/seconds) as its argument,

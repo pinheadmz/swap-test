@@ -34,13 +34,16 @@ function testSwapLib(lib) {
 
   const fundingTX = swap.getFundingTX(address, 50000);
 
+  const fundingTXoutput = swap.extractOutput(fundingTX, address, network);
+  console.log('Funding TX output:\n', fundingTXoutput);
+
   const refundScript = swap.getRefundInputScript(redeemScript);
 
   const refundTX = swap.getRedeemTX(
     Timmy.address,
     10000,
     fundingTX,
-    0,
+    fundingTX.index,
     redeemScript,
     refundScript,
     TX_nSEQUENCE,

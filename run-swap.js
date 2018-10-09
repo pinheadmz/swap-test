@@ -127,99 +127,117 @@ const wantWallet = new WalletClient({
 switch (mode){
   // ** START ** Initiate the swap by funding the HTLC address on "my" chain
   case 'start': {
-
-    // initialize variables we'll need for the event listener
-    let wantRedeemScript, wantAddress;
-
     (async () => {
-      // Build the "have" P2SH address with the HTLC script and LONG timelock
-      const haveRefundScript = haveSwap.getRedeemScript(
-        myObject.hash,
-        myObject.publicKey,
-        theirObject.publicKey,
-        cancelTime
-      );
+      const {wantRedeemScript, wantAddress} = await postHTLC();
 
-      const haveAddrFromScript =
-        haveSwap.getAddressFromRedeemScript(haveRefundScript);
-      const haveAddress = haveAddrFromScript.toString(network);
+      wantWallet.bind('tx', async (wallet, txDetails) => {
+        console.log(want + ' funding TX Received:\n', txDetails.hash);
 
-      console.log(have + ' P2SH address: ' + haveAddress);
-      
-      // create a watch-only wallet in case we need to self-refund
-      const haveWalletName = nameWallet(haveAddress);
-      await haveWallet.createWallet(haveWalletName, {watchOnly: true});
+        const fundingTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
+        const fundingOutput = wantSwap.extractOutput(
+          fundingTX,
+          wantAddress,
+          network
+        );
+        console.log(want + ' funding TX output:\n', fundingOutput);
 
-      const haveWatchWallet = haveWallet.wallet(haveWalletName);
-      await haveWatchWallet.importAddress('default', haveAddress);
+        const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
+        const swapScript = wantSwap.getSwapInputScript(
+          wantRedeemScript,
+          myObject.secret
+        );
+        const swapTX = wantSwap.getRedeemTX(
+          sweepToAddr,
+          feeRate,
+          fundingTX,
+          fundingOutput.index,
+          wantRedeemScript,
+          swapScript,
+          wantSwap.util.now(),
+          myObject.privateKey
+        );
 
-      // Build the "want" P2SH address with HTLC and SHORT timelock
-      wantRedeemScript = wantSwap.getRedeemScript(
-        myObject.hash,
-        theirObject.publicKey,
-        myObject.publicKey,
-        swapTime
-      );
+        const finalTX = swapTX.toTX();
+        const stringTX = finalTX.toRaw().toString('hex');
 
-      const wantAddrFromScript =
-        wantSwap.getAddressFromRedeemScript(wantRedeemScript);
-      wantAddress = wantAddrFromScript.toString(network);
+        console.log(want + ' swap-sweep TX:\n', swapTX.txid());
 
-      console.log(want + ' P2SH address: ' + wantAddress);
+        const broadcastResult = await wantClient.broadcast(stringTX);
 
-      // create a watch-only wallet to catch counterparty's side of the trade
-      const wantWalletName = nameWallet(wantAddress);
-      await wantWallet.createWallet(wantWalletName, {watchOnly: true});
-
-      const wantWatchWallet = wantWallet.wallet(wantWalletName);
-      await wantWatchWallet.importAddress('default', wantAddress);
-
-      const watchWalletInfo = await wantWatchWallet.getInfo();
-      console.log(want + ' watch-only wallet created:\n', watchWalletInfo);
-
-      await wantWallet.join(wantWalletName, watchWalletInfo.token);
-
-      // NOW we're ready: Fund swap address from primary wallet and report
-      const haveFundingWallet = haveWallet.wallet(walletID);
-      const fundingTX = await haveFundingWallet.send({
-        passphrase: passphrase,
-        outputs: [{ value: amount, address: haveAddress }]
+        console.log(want + ' broadcasting swap TX: ', broadcastResult);
       });
-      console.log(have + ' swap-funding TX:\n', fundingTX);
     })();
+    break;
+  }
 
+  // ** SWAP ** Accept swap by posting TX with HTLC and wait for secret
+  case 'swap': {
 
-    wantWallet.bind('tx', async (wallet, fundingTX) => {
-      console.log(want + ' funding TX Received:\n', fundingTX);
-
-      const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
-      const swapScript = wantSwap.getSwapInputScript(
-        wantRedeemScript,
-        myObject.secret
-      );
-      const swapTX = wantSwap.getRedeemTX(
-        sweepToAddr,
-        feeRate,
-        wantSwap.TX.fromRaw(fundingTX.tx, 'hex'),
-        0,
-        wantRedeemScript,
-        swapScript,
-        wantSwap.util.now(),
-        myObject.privateKey
-      );
-
-      const finalTX = swapTX.toTX();
-      const stringTX = finalTX.toRaw().toString('hex');
-
-      console.log(want + ' swap TX:\n', finalTX);
-
-      const broadcastResult = await wantClient.broadcast(stringTX);
-
-      console.log(want + ' broadcasting swap TX: ', broadcastResult);
-    });
     break;
   }
 }
+
+async function postHTLC() {
+  // Build the "have" P2SH address with the HTLC script and LONG timelock
+  const haveRefundScript = haveSwap.getRedeemScript(
+    myObject.hash,
+    myObject.publicKey,
+    theirObject.publicKey,
+    cancelTime
+  );
+
+  const haveAddrFromScript =
+    haveSwap.getAddressFromRedeemScript(haveRefundScript);
+  const haveAddress = haveAddrFromScript.toString(network);
+
+  console.log(have + ' P2SH address:\n', haveAddress);
+  
+  // create a watch-only wallet in case we need to self-refund
+  const haveWalletName = nameWallet(haveAddress);
+  await haveWallet.createWallet(haveWalletName, {watchOnly: true});
+
+  const haveWatchWallet = haveWallet.wallet(haveWalletName);
+  await haveWatchWallet.importAddress('default', haveAddress);
+
+  // Build the "want" P2SH address with HTLC and SHORT timelock
+  const wantRedeemScript = wantSwap.getRedeemScript(
+    myObject.hash,
+    theirObject.publicKey,
+    myObject.publicKey,
+    swapTime
+  );
+
+  const wantAddrFromScript =
+    wantSwap.getAddressFromRedeemScript(wantRedeemScript);
+  const wantAddress = wantAddrFromScript.toString(network);
+
+  console.log(want + ' P2SH address:\n', wantAddress);
+
+  // create a watch-only wallet to catch counterparty's side of the trade
+  const wantWalletName = nameWallet(wantAddress);
+  await wantWallet.createWallet(wantWalletName, {watchOnly: true});
+
+  const wantWatchWallet = wantWallet.wallet(wantWalletName);
+  await wantWatchWallet.importAddress('default', wantAddress);
+
+  const watchWalletInfo = await wantWatchWallet.getInfo();
+  console.log(want + ' watch-only wallet created:\n', watchWalletInfo.id);
+
+  await wantWallet.join(wantWalletName, watchWalletInfo.token);
+
+  // NOW we're ready: Fund swap address from primary wallet and report
+  const haveFundingWallet = haveWallet.wallet(walletID);
+  const fundingTX = await haveFundingWallet.send({
+    passphrase: passphrase,
+    outputs: [{ value: amount, address: haveAddress }]
+  });
+  console.log(have + ' swap-funding TX:\n', fundingTX.hash);
+
+  return {
+    wantRedeemScript: wantRedeemScript,
+    wantAddress: wantAddress
+  }
+};
 
 function err(msg){
   console.log(msg);

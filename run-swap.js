@@ -83,8 +83,8 @@ if (supportedModes.indexOf(mode) === -1) {
 const haveSwap = new Swap(have);
 const wantSwap = new Swap(want);
 
-// Derive the necessary public strings from privates
-// using the "have" library here but it could be either for this step
+// Derive the necessary public strings from privates.
+// Using the "have" library here but it could be either for this step.
 myObject.publicKey = haveSwap.getKeyPair(myObject.privateKey).publicKey;
 myObject.hash = haveSwap.getSecret(myObject.secret).hash;
 
@@ -125,14 +125,30 @@ const wantWallet = new WalletClient({
 })();
 
 switch (mode){
-  // ** START ** Initiate the swap by funding the HTLC address on "my" chain
+  // ** START ** Initiate the swap by funding the HTLC address on "have" chain
   case 'start': {
     (async () => {
-      const {wantRedeemScript, wantAddress} = await postHTLC();
+      // Create P2SH addresses and watch-only wallets for both chains
+      const {
+        wantRedeemScript,
+        wantAddress,
+        haveAddress
+      } = await createHTLC(myObject.hash, cancelTime, swapTime);
 
+      // SEND COINS! Fund swap address from primary wallet and report
+      const haveFundingWallet = haveWallet.wallet(walletID);
+      const fundingTX = await haveFundingWallet.send({
+        passphrase: passphrase,
+        outputs: [{ value: amount, address: haveAddress }]
+      });
+      console.log(have + ' swap-funding TX sent:\n', fundingTX.hash);
+
+      // Wait for counterparty TX and sweep it, using our hash's SECRET
       wantWallet.bind('tx', async (wallet, txDetails) => {
         console.log(want + ' funding TX Received:\n', txDetails.hash);
 
+        // Get details from counterparty's TX
+        // TODO: check amount and wait for confirmation for safety
         const fundingTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
         const fundingOutput = wantSwap.extractOutput(
           fundingTX,
@@ -141,6 +157,7 @@ switch (mode){
         );
         console.log(want + ' funding TX output:\n', fundingOutput);
 
+        // Create a TX on "want" chain to sweep counterparty's output
         const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
         const swapScript = wantSwap.getSwapInputScript(
           wantRedeemScript,
@@ -153,17 +170,15 @@ switch (mode){
           fundingOutput.index,
           wantRedeemScript,
           swapScript,
-          wantSwap.util.now(),
+          null,
           myObject.privateKey
         );
-
         const finalTX = swapTX.toTX();
         const stringTX = finalTX.toRaw().toString('hex');
-
         console.log(want + ' swap-sweep TX:\n', swapTX.txid());
 
+        // Broadcast swap-sweep TX, we're done!
         const broadcastResult = await wantClient.broadcast(stringTX);
-
         console.log(want + ' broadcasting swap TX: ', broadcastResult);
       });
     })();
@@ -172,70 +187,124 @@ switch (mode){
 
   // ** SWAP ** Accept swap by posting TX with HTLC and wait for secret
   case 'swap': {
+    (async () => {
+      // Create P2SH addresses and watch-only wallets for both chains
+      const {
+        wantRedeemScript,
+        wantAddress,
+        haveAddress
+      } = await createHTLC(theirObject.hash, swapTime, cancelTime);
 
+      // Wait for counterparty TX before posting our own
+      wantWallet.bind('tx', async (wallet, txDetails) => {
+        console.log(want + ' funding TX Received:\n', txDetails.hash);
+
+        // Get details from counterparty's TX
+        // TODO: check amount and wait for confirmation for safety
+        const startTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
+        const startTXoutput = wantSwap.extractOutput(
+          startTX,
+          wantAddress,
+          network
+        );
+        console.log(want + ' funding TX output:\n', startTXoutput);
+
+        // SEND COINS! Fund swap address from primary wallet and report
+        const haveFundingWallet = haveWallet.wallet(walletID);
+        const fundingTX = await haveFundingWallet.send({
+          passphrase: passphrase,
+          outputs: [{ value: amount, address: haveAddress }]
+        });
+        console.log(have + ' swap-funding TX Sent:\n', fundingTX.hash);
+      });
+
+      // Watch our own "have" TX and wait for counterparty to sweep it
+      haveWallet.bind('tx', async (wallet, txDetails) => {
+        console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
+
+        // Get details from counterparty's TX
+        // TODO: check amount and wait for confirmation for safety
+        const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
+        const revealedSecret = haveSwap.extractSecret(fundingTX);
+        console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
+
+        // Create a TX on "want" chain to sweep counterparty's output
+        const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
+        const swapScript = wantSwap.getSwapInputScript(
+          wantRedeemScript,
+          revealedSecret
+        );
+        const swapTX = wantSwap.getRedeemTX(
+          sweepToAddr,
+          feeRate,
+          fundingTX,
+          fundingOutput.index,
+          wantRedeemScript,
+          swapScript,
+          null,
+          myObject.privateKey
+        );
+        const finalTX = swapTX.toTX();
+        const stringTX = finalTX.toRaw().toString('hex');
+        console.log(want + ' swap-sweep TX:\n', swapTX.txid());
+
+        // Broadcast swap-sweep TX, we're done!
+        const broadcastResult = await wantClient.broadcast(stringTX);
+        console.log(want + ' broadcasting swap TX: ', broadcastResult);
+      });
+    })();
     break;
   }
 }
 
-async function postHTLC() {
+async function createHTLC(hash, haveTimelock, wantTimelock) {
   // Build the "have" P2SH address with the HTLC script and LONG timelock
-  const haveRefundScript = haveSwap.getRedeemScript(
-    myObject.hash,
+  const haveRedeemScript = haveSwap.getRedeemScript(
+    hash,
     myObject.publicKey,
     theirObject.publicKey,
-    cancelTime
+    haveTimelock
   );
 
   const haveAddrFromScript =
-    haveSwap.getAddressFromRedeemScript(haveRefundScript);
+    haveSwap.getAddressFromRedeemScript(haveRedeemScript);
   const haveAddress = haveAddrFromScript.toString(network);
-
   console.log(have + ' P2SH address:\n', haveAddress);
   
   // create a watch-only wallet in case we need to self-refund
-  const haveWalletName = nameWallet(haveAddress);
+  // TODO: if wallet already exists, that's ok
+  const haveWalletName = haveSwap.nameWallet(haveAddress);
   await haveWallet.createWallet(haveWalletName, {watchOnly: true});
-
   const haveWatchWallet = haveWallet.wallet(haveWalletName);
   await haveWatchWallet.importAddress('default', haveAddress);
 
   // Build the "want" P2SH address with HTLC and SHORT timelock
   const wantRedeemScript = wantSwap.getRedeemScript(
-    myObject.hash,
+    hash,
     theirObject.publicKey,
     myObject.publicKey,
-    swapTime
+    wantTimelock
   );
-
   const wantAddrFromScript =
     wantSwap.getAddressFromRedeemScript(wantRedeemScript);
   const wantAddress = wantAddrFromScript.toString(network);
-
   console.log(want + ' P2SH address:\n', wantAddress);
 
   // create a watch-only wallet to catch counterparty's side of the trade
-  const wantWalletName = nameWallet(wantAddress);
+  // TODO: if wallet already exists, that's ok
+  const wantWalletName = wantSwap.nameWallet(wantAddress);
   await wantWallet.createWallet(wantWalletName, {watchOnly: true});
-
   const wantWatchWallet = wantWallet.wallet(wantWalletName);
   await wantWatchWallet.importAddress('default', wantAddress);
-
   const watchWalletInfo = await wantWatchWallet.getInfo();
+  await wantWallet.join(wantWalletName, watchWalletInfo.token);
   console.log(want + ' watch-only wallet created:\n', watchWalletInfo.id);
 
-  await wantWallet.join(wantWalletName, watchWalletInfo.token);
-
-  // NOW we're ready: Fund swap address from primary wallet and report
-  const haveFundingWallet = haveWallet.wallet(walletID);
-  const fundingTX = await haveFundingWallet.send({
-    passphrase: passphrase,
-    outputs: [{ value: amount, address: haveAddress }]
-  });
-  console.log(have + ' swap-funding TX:\n', fundingTX.hash);
-
+  // send back the addresses, used by the modes differently
   return {
     wantRedeemScript: wantRedeemScript,
-    wantAddress: wantAddress
+    wantAddress: wantAddress,
+    haveAddress: haveAddress
   }
 };
 
@@ -243,23 +312,3 @@ function err(msg){
   console.log(msg);
   process.exit();
 }
-
-function nameWallet(address){
-  if (address.length <= 40)
-    return address;
-  else
-    return address.substr(address.length-40);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-

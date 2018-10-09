@@ -12,8 +12,8 @@ function testSwapLib(lib) {
 
   const hour = 60 * 60;
   const day = hour * 24;
-  const CSV_LOCKTIME = 1 * hour; // can't spend redeem until this time
-  const TX_nSEQUENCE = 2 * hour; // minimum time the spending tx can be mined
+  const CSV_LOCKTIME = 1 * hour; // can't spend redeem until this time passes
+  const TX_nSEQUENCE = 2 * hour; // minimum passed time before redeem tx valid
 
   const secret = swap.getSecret();
   const Timmy = swap.getKeyPair();
@@ -43,7 +43,7 @@ function testSwapLib(lib) {
     Timmy.address,
     10000,
     fundingTX,
-    fundingTX.index,
+    fundingTXoutput.index,
     redeemScript,
     refundScript,
     TX_nSEQUENCE,
@@ -58,10 +58,10 @@ function testSwapLib(lib) {
     Chris.address,
     10000,
     fundingTX,
-    0,
+    fundingTXoutput.index,
     redeemScript,
     swapScript,
-    TX_nSEQUENCE,
+    null,
     Chris.privateKey
   );
 

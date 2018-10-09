@@ -6,8 +6,8 @@
  */
 
 // set these for each test -------!!
-const lib = 'bcash';    // bcoin, bcash
-const mode = 'swap';  // refund, swap
+const lib = 'bcoin';    // bcoin, bcash
+const mode = 'refund';  // refund, swap
 // -------------------------------!!
 
 const {NodeClient, WalletClient} = require('bclient');
@@ -36,15 +36,11 @@ const secret = swap.getSecret();
 const Timmy = swap.getKeyPair();
 const Chris = swap.getKeyPair();
 
-let redeemScript, address, CLTV_LOCKTIME, TX_nLOCKTIME;
+let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
 
 (async () => {
-  const clientinfo = await client.getInfo();
-  const currentHeight = clientinfo.chain.height;
-  console.log('Current chain height:\n', currentHeight);
-
-  CLTV_LOCKTIME = currentHeight; // can't spend redeem until this height
-  TX_nLOCKTIME = currentHeight;  // minimum height the funding tx can be mined
+  CLTV_LOCKTIME = 60 * 10; // can't spend redeem until ten minutes pass
+  TX_nSEQUENCE = 60 * 10;  // minimum height the funding tx can be mined
 
   console.log('Timmy:\n', Timmy, '\nChris:\n', Chris);
 
@@ -64,7 +60,7 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nLOCKTIME;
   );
   console.log('Swap P2SH address:\n', address);
 
-  const walletName = address.substr(address.length-40);
+  const walletName = swap.nameWallet(address);
   await wallet.createWallet(walletName, {watchOnly: true});
   
   const watchWallet = wallet.wallet(walletName);
@@ -77,12 +73,9 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nLOCKTIME;
   await wallet.join(walletName, watchWalletInfo.token);
 })();
 
-
-wallet.bind('tx', async (wallet, fundingTX) => {
-  console.log('Funding TX Received:\n', fundingTX);
-
-  switch (mode) {
-    case 'refund': {
+switch (mode) {
+  case 'refund': {
+    wallet.bind('confirmed', async (wallet, fundingTX) => {
       const refundScript = swap.getRefundInputScript(redeemScript);
       const refundTX = swap.getRedeemTX(
         Timmy.address,
@@ -91,7 +84,7 @@ wallet.bind('tx', async (wallet, fundingTX) => {
         0,
         redeemScript,
         refundScript,
-        TX_nLOCKTIME,
+        TX_nSEQUENCE,
         Timmy.privateKey
       );
 
@@ -100,12 +93,19 @@ wallet.bind('tx', async (wallet, fundingTX) => {
 
       console.log('Refund TX:\n', finalTX);
 
-      const broadcastResult = await client.broadcast(stringTX);
-
-      console.log('Broadcast TX: ', broadcastResult);
-      break;
-    }
-    case 'swap': {
+      // this requires timeout to be HUUUUGE in brq/lib/request.js
+      // wait twenty minutes and try again
+      console.log('Waiting 20 minutes...')
+      setTimeout(async () => {
+        const broadcastResult2 = await client.broadcast(stringTX);
+        console.log('Broadcast TX 20 min later: ', broadcastResult2);
+      }, 60 * 20 * 1000);
+    });
+    break;
+  }
+  case 'swap': {
+    wallet.bind('tx', async (wallet, fundingTX) => {
+      console.log('Funding TX Received:\n', fundingTX);
       const swapScript = swap.getSwapInputScript(redeemScript, secret.secret);
       const swapTX = swap.getRedeemTX(
         Chris.address,
@@ -114,7 +114,7 @@ wallet.bind('tx', async (wallet, fundingTX) => {
         0,
         redeemScript,
         swapScript,
-        TX_nLOCKTIME,
+        null,
         Chris.privateKey
       );
 
@@ -126,9 +126,7 @@ wallet.bind('tx', async (wallet, fundingTX) => {
       const broadcastResult = await client.broadcast(stringTX);
 
       console.log('Broadcast TX: ', broadcastResult);
-      break;
-    }
+    });
+    break;
   }
-
-});
-
+}

@@ -209,7 +209,10 @@ class Swap {
     })
     redeemTX.addCoin(coin);
     redeemTX.inputs[0].script = inputScript;
-    redeemTX.setSequence(0, locktime, this.CSV_seconds);
+    if (locktime)
+      redeemTX.setSequence(0, locktime, this.CSV_seconds);
+    else
+      redeemTX.inputs[0].sequence = 0xffffffff;
 
     let version_or_flags = 0;
     let type = null;
@@ -283,6 +286,12 @@ class Swap {
     return locktimeUint32;
   }
 
+  nameWallet(address){
+    if (address.length <= 40)
+      return address;
+    else
+      return address.substr(address.length-40);
+  }
 }
 
 /*

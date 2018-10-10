@@ -158,13 +158,14 @@ switch (mode){
         console.log(want + ' funding TX output:\n', fundingOutput);
 
         // Create a TX on "want" chain to sweep counterparty's output
-        const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
+        const sweepToAddr = 
+          await wantWallet.createAddress(walletAcct);
         const swapScript = wantSwap.getSwapInputScript(
           wantRedeemScript,
           myObject.secret
         );
         const swapTX = wantSwap.getRedeemTX(
-          sweepToAddr,
+          sweepToAddr.address,
           feeRate,
           fundingTX,
           fundingOutput.index,
@@ -175,7 +176,7 @@ switch (mode){
         );
         const finalTX = swapTX.toTX();
         const stringTX = finalTX.toRaw().toString('hex');
-        console.log(want + ' swap-sweep address:\n', sweepToAddr);
+        console.log(want + ' swap-sweep address:\n', sweepToAddr.address);
         console.log(want + ' swap-sweep TX:\n', swapTX.txid());
 
         // Broadcast swap-sweep TX, we're done!
@@ -243,13 +244,14 @@ switch (mode){
         console.log(have + ' funding TX output:\n', fundingOutput);
 
         // Create a TX on "want" chain to sweep counterparty's output
-        const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
+        const sweepToAddr =
+          await wantWallet.createAddress(walletAcct);
         const swapScript = wantSwap.getSwapInputScript(
           wantRedeemScript,
           revealedSecret
         );
         const swapTX = wantSwap.getRedeemTX(
-          sweepToAddr,
+          sweepToAddr.address,
           feeRate,
           fundingTX,
           fundingOutput.index,
@@ -260,7 +262,7 @@ switch (mode){
         );
         const finalTX = swapTX.toTX();
         const stringTX = finalTX.toRaw().toString('hex');
-        console.log(want + ' swap-sweep address:\n', sweepToAddr);
+        console.log(want + ' swap-sweep address:\n', sweepToAddr.address);
         console.log(want + ' swap-sweep TX:\n', swapTX.txid());
 
         // Broadcast swap-sweep TX, we're done!

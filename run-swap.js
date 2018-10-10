@@ -279,7 +279,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
   await haveWatchWallet.importAddress('default', haveAddress);
   const haveWalletInfo = await haveWatchWallet.getInfo();
   await haveWallet.join(haveWalletName, haveWalletInfo.token);
-  console.log(want + ' watch-only wallet created:\n', watchWalletInfo.id);
+  console.log(have + ' watch-only wallet created:\n', haveWalletInfo.id);
 
   // Build the "want" P2SH address with HTLC and SHORT timelock
   const wantRedeemScript = wantSwap.getRedeemScript(

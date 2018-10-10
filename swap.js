@@ -54,11 +54,11 @@ class Swap {
 
   getSecret(secret) {
     if (!secret)
-      secret = bcrypto.randomBytes(32);
+      secret = bcrypto.random.randomBytes(32);
     else
       secret = ensureBuffer(secret);
 
-    const hash = bcrypto.sha256.digest(secret);
+    const hash = bcrypto.SHA256.digest(secret);
 
     return {
       'secret': secret,

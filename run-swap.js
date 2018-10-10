@@ -225,6 +225,12 @@ switch (mode){
         // Get details from counterparty's TX
         // TODO: check amount and wait for confirmation for safety
         const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
+        const fundingOutput = haveSwap.extractOutput(
+          fundingTX,
+          haveAddress,
+          network
+        );
+        console.log(have + ' funding TX output:\n', fundingOutput);
         const revealedSecret = haveSwap.extractSecret(fundingTX);
         console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
 

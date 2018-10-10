@@ -251,6 +251,7 @@ class Swap {
         continue;
       return input.script.code[1].data;
     }
+    return false;
   }
 
   extractOutput(tx, address, network) {
@@ -263,6 +264,7 @@ class Swap {
         }
       }
     }
+    return false;
   }
 
   /* Whereas CLTV takes a regular number (blocks/seconds) as its argument,

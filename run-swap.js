@@ -175,6 +175,7 @@ switch (mode){
         );
         const finalTX = swapTX.toTX();
         const stringTX = finalTX.toRaw().toString('hex');
+        console.log(want + ' swap-sweep address:\n', sweepToAddr);
         console.log(want + ' swap-sweep TX:\n', swapTX.txid());
 
         // Broadcast swap-sweep TX, we're done!
@@ -224,22 +225,22 @@ switch (mode){
         // Get details from counterparty's TX
         // TODO: check amount and wait for confirmation for safety
         const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
+        
+        const revealedSecret = haveSwap.extractSecret(fundingTX);
+        if (!revealedSecret){
+          console.log(have + ' TX received with unrecognized output')
+          return;
+        } else {
+          console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
+        }
+        console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
+
         const fundingOutput = haveSwap.extractOutput(
           fundingTX,
           haveAddress,
           network
         );
-
-        if (!fundingOutput){
-          console.log(have + ' TX received with no useable output')
-          return;
-        }
-
-        console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
-
         console.log(have + ' funding TX output:\n', fundingOutput);
-        const revealedSecret = haveSwap.extractSecret(fundingTX);
-        console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
 
         // Create a TX on "want" chain to sweep counterparty's output
         const sweepToAddr = await wantWallet.createAddress(walletAcct).address;
@@ -259,6 +260,7 @@ switch (mode){
         );
         const finalTX = swapTX.toTX();
         const stringTX = finalTX.toRaw().toString('hex');
+        console.log(want + ' swap-sweep address:\n', sweepToAddr);
         console.log(want + ' swap-sweep TX:\n', swapTX.txid());
 
         // Broadcast swap-sweep TX, we're done!

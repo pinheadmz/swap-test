@@ -158,8 +158,9 @@ switch (mode){
         console.log(want + ' funding TX output:\n', fundingOutput);
 
         // Create a TX on "want" chain to sweep counterparty's output
+        const wantReceivingWallet = wantWallet.wallet(walletID);
         const sweepToAddr = 
-          await wantWallet.createAddress(walletAcct);
+          await wantReceivingWallet.createAddress(walletAcct);
         const swapScript = wantSwap.getSwapInputScript(
           wantRedeemScript,
           myObject.secret
@@ -194,6 +195,7 @@ switch (mode){
       // Create P2SH addresses and watch-only wallets for both chains
       const {
         wantRedeemScript,
+        haveRedeemScript,
         wantAddress,
         haveAddress
       } = await createHTLC(theirObject.hash, swapTime, cancelTime);
@@ -227,7 +229,10 @@ switch (mode){
         // TODO: check amount and wait for confirmation for safety
         const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
         
-        const revealedSecret = haveSwap.extractSecret(fundingTX);
+        const revealedSecret = haveSwap.extractSecret(
+          fundingTX,
+          haveRedeemScript
+        );
         if (!revealedSecret){
           console.log(have + ' TX received with unrecognized output')
           return;
@@ -244,8 +249,9 @@ switch (mode){
         console.log(have + ' funding TX output:\n', fundingOutput);
 
         // Create a TX on "want" chain to sweep counterparty's output
+        const wantReceivingWallet = wantWallet.wallet(walletID);
         const sweepToAddr =
-          await wantWallet.createAddress(walletAcct);
+          await wantReceivingWallet.createAddress(walletAcct);
         const swapScript = wantSwap.getSwapInputScript(
           wantRedeemScript,
           revealedSecret
@@ -324,6 +330,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
   // send back the addresses, used by the modes differently
   return {
     wantRedeemScript: wantRedeemScript,
+    haveRedeemScript: haveRedeemScript,
     wantAddress: wantAddress,
     haveAddress: haveAddress
   }

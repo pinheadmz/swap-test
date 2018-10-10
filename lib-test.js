@@ -67,7 +67,7 @@ function testSwapLib(lib) {
 
   console.log('\nSWAP VERIFY:\n', swap.verifyMTX(swapTX));
 
-  const extractedSecret = swap.extractSecret(swapTX);
+  const extractedSecret = swap.extractSecret(swapTX, redeemScript);
   console.log('\nExtracted HTLC secret:\n', extractedSecret);
   console.log('Secret match:\n', extractedSecret == secret.secret);
 }

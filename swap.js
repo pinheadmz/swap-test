@@ -247,7 +247,7 @@ class Swap {
 
   extractSecret(tx, redeemScript){
     for (const input of tx.inputs){
-      if (input.redeem === redeemScript)
+      if (input.getRedeem().toString() === redeemScript.toString())
         return input.script.code[1].data;
     }
     return false;

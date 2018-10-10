@@ -180,6 +180,7 @@ switch (mode){
         // Broadcast swap-sweep TX, we're done!
         const broadcastResult = await wantClient.broadcast(stringTX);
         console.log(want + ' broadcasting swap TX: ', broadcastResult);
+        process.exit();
       });
     })();
     break;
@@ -220,8 +221,6 @@ switch (mode){
 
       // Watch our own "have" TX and wait for counterparty to sweep it
       haveWallet.bind('tx', async (wallet, txDetails) => {
-        console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
-
         // Get details from counterparty's TX
         // TODO: check amount and wait for confirmation for safety
         const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
@@ -230,6 +229,14 @@ switch (mode){
           haveAddress,
           network
         );
+
+        if (!fundingOutput){
+          console.log(have + ' TX received with no useable output')
+          return;
+        }
+
+        console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
+
         console.log(have + ' funding TX output:\n', fundingOutput);
         const revealedSecret = haveSwap.extractSecret(fundingTX);
         console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
@@ -257,6 +264,7 @@ switch (mode){
         // Broadcast swap-sweep TX, we're done!
         const broadcastResult = await wantClient.broadcast(stringTX);
         console.log(want + ' broadcasting swap TX: ', broadcastResult);
+        process.exit();
       });
     })();
     break;

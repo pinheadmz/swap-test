@@ -231,7 +231,8 @@ switch (mode){
         
         const revealedSecret = haveSwap.extractSecret(
           fundingTX,
-          haveRedeemScript
+          haveAddress,
+          network
         );
         if (!revealedSecret){
           console.log(have + ' TX received with unrecognized output')

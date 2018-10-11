@@ -203,6 +203,8 @@ class Swap {
     const coin = this.Coin.fromTX(fundingTX, fundingTXoutput, -1);
     privateKey = ensureBuffer(privateKey);
 
+console.log('\n***\n', address);
+
     redeemTX.addOutput({
       address: address,
       value: coin.value - fee
@@ -245,9 +247,9 @@ class Swap {
     return tx.verify(view);
   }
 
-  extractSecret(tx, redeemScript){
+  extractSecret(tx, address, network){
     for (const input of tx.inputs){
-      if (input.getRedeem().toString() === redeemScript.toString())
+      if (input.getAddress().toString(network) === address)
         return input.script.code[1].data;
     }
     return false;

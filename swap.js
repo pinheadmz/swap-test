@@ -14,9 +14,10 @@ const bcrypto = require('bcrypto');
  */
 
 class Swap {
-  constructor(lib){
-    this.lib = lib;
-
+  constructor(lib, network){
+    this.lib = require(lib);
+    this.lib.Network.set(network);
+/*
     const {
       Outpoint,
       Coin,
@@ -30,18 +31,20 @@ class Swap {
       consensus,
       util
     } = require(lib);
+*/
 
-    this.Outpoint = Outpoint;
-    this.Coin = Coin;
-    this.MTX = MTX;
-    this.TX = TX;
-    this.Address = Address;
-    this.hd = hd;
-    this.KeyRing = KeyRing;
-    this.Script = Script;
-    this.Stack = Stack;
-    this.consensus = consensus;
-    this.util = util;
+
+    this.Outpoint = this.lib.Outpoint;
+    this.Coin = this.lib.Coin;
+    this.MTX = this.lib.MTX;
+    this.TX = this.lib.TX;
+    this.Address = this.lib.Address;
+    this.hd = this.lib.hd;
+    this.KeyRing = this.lib.KeyRing;
+    this.Script = this.lib.Script;
+    this.Stack = this.lib.Stack;
+    this.consensus = this.lib.consensus;
+    this.util = this.lib.util;
 
     this.flags = this.Script.flags.STANDARD_VERIFY_FLAGS;
     this.CSV_seconds = true;
@@ -203,12 +206,10 @@ class Swap {
     const coin = this.Coin.fromTX(fundingTX, fundingTXoutput, -1);
     privateKey = ensureBuffer(privateKey);
 
-console.log('\n***\n', address);
+   if (typeof address !== 'string')
+      address = address.toString()
 
-    redeemTX.addOutput({
-      address: address,
-      value: coin.value - fee
-    })
+    redeemTX.addOutput(address, coin.value - fee);
     redeemTX.addCoin(coin);
     redeemTX.inputs[0].script = inputScript;
     if (locktime)
@@ -235,7 +236,7 @@ console.log('\n***\n', address);
 
     inputScript.setData(0, sig);
     inputScript.compile();
-
+console.log(redeemTX);
     return redeemTX;
   }
 
@@ -247,21 +248,32 @@ console.log('\n***\n', address);
     return tx.verify(view);
   }
 
-  extractSecret(tx, address, network){
+  extractSecret(tx, address){
+    if (typeof address !== 'string')
+      address = address.toString()
+
     for (const input of tx.inputs){
-      if (input.getAddress().toString(network) === address)
+      const inputJSON = input.getJSON();
+      const inAddr = inputJSON.address;
+//console.log('\n--- EXTRACTING SECRET:\n', inAddr, '\n', address, '\n---');
+      if (inAddr === address)
         return input.script.code[1].data;
     }
     return false;
   }
 
-  extractOutput(tx, address, network) {
+  extractOutput(tx, address) {
+    if (typeof address !== 'string')
+      address = address.toString()
+
     for (let i = 0; i < tx.outputs.length; i++) {
-      const output = tx.outputs[i].getJSON(network);
-      if (output.address === address.toString(network)) {
+      const outputJSON = tx.outputs[i].getJSON();
+      const outAddr = outputJSON.address;
+//console.log('\n--- EXTRACTING OUTPUT:\n', outAddr, '\n', address, '\n---');
+      if (outAddr === address) {
         return {
           index: i,
-          amount: output.value
+          amount: outputJSON.value
         }
       }
     }

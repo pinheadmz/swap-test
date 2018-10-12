@@ -15,7 +15,7 @@ const {BloomFilter} = require('bfilter');
 const Swap = require('./swap');
 const network = 'testnet';
 
-const swap = new Swap(lib);
+const swap = new Swap(lib, network);
 
 const nodePort = (lib == 'bcoin') ? 18332 : 18032;
 const walletPort = (lib == 'bcoin') ? 18334 : 18034;
@@ -78,6 +78,7 @@ switch (mode) {
     wallet.bind('confirmed', async (wallet, fundingTX) => {
       const refundScript = swap.getRefundInputScript(redeemScript);
       const refundTX = swap.getRedeemTX(
+        network,
         Timmy.address,
         2000,
         swap.TX.fromRaw(fundingTX.tx, 'hex'),
@@ -108,6 +109,7 @@ switch (mode) {
       console.log('Funding TX Received:\n', fundingTX);
       const swapScript = swap.getSwapInputScript(redeemScript, secret.secret);
       const swapTX = swap.getRedeemTX(
+        network,
         Chris.address,
         2000,
         swap.TX.fromRaw(fundingTX.tx, 'hex'),

@@ -5,10 +5,10 @@
 const Swap = require('./swap');
 const network = 'testnet';
 
-function testSwapLib(lib) {
-  console.log('\n -- testing: ', lib)
+function testSwapLib(lib, network) {
+  console.log('\n -- testing: ' + lib + ' on network: ' + network)
 
-  const swap = new Swap(lib);
+  const swap = new Swap(lib, network);
 
   const hour = 60 * 60;
   const day = hour * 24;
@@ -30,11 +30,11 @@ function testSwapLib(lib) {
 
   const address = swap.getAddressFromRedeemScript(redeemScript);
 
-  console.log('Swap P2SH address:\n', address.toString(network));
+  console.log('Swap P2SH address:\n', address.toString());
 
   const fundingTX = swap.getFundingTX(address, 50000);
 
-  const fundingTXoutput = swap.extractOutput(fundingTX, address, network);
+  const fundingTXoutput = swap.extractOutput(fundingTX, address);
   console.log('Funding TX output:\n', fundingTXoutput);
 
   const refundScript = swap.getRefundInputScript(redeemScript);
@@ -67,12 +67,12 @@ function testSwapLib(lib) {
 
   console.log('\nSWAP VERIFY:\n', swap.verifyMTX(swapTX));
 
-  const extractedSecret = swap.extractSecret(swapTX, redeemScript);
+  const extractedSecret = swap.extractSecret(swapTX, address);
   console.log('\nExtracted HTLC secret:\n', extractedSecret);
   console.log('Secret match:\n', extractedSecret == secret.secret);
 }
 
 const libs = ['bcoin', 'bcash'];
 for (const lib of libs){
-  testSwapLib(lib);
+  testSwapLib(lib, network);
 }

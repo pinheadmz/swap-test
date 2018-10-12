@@ -45,8 +45,8 @@ const myObject = JSON.parse(base58.decode(mine));
 const theirObject = JSON.parse(base58.decode(theirs));
 
 // Check all the parameters in the base58-encoded JSON objects
-if (typeof(myObject.privateKey) !== 'string'
-    || typeof(myObject.secret) !== 'string') {
+if (typeof myObject.privateKey !== 'string'
+    || typeof myObject.secret !== 'string') {
   err ('Bad mine');
 }
 
@@ -56,8 +56,8 @@ if (myObject.privateKey.length !== 64)
 if (myObject.secret.length !== 64)
   err ('Bad mine: secret size');  
 
-if (typeof(theirObject.publicKey) !== 'string'
-    || typeof(theirObject.hash) !== 'string') {
+if (typeof theirObject.publicKey !== 'string'
+    || typeof theirObject.hash) !== 'string') {
   err ('Bad theirs');
 }
 
@@ -80,8 +80,8 @@ if (supportedModes.indexOf(mode) === -1) {
 }
 
 // Load blockchain libraries
-const haveSwap = new Swap(have);
-const wantSwap = new Swap(want);
+const haveSwap = new Swap(have, network);
+const wantSwap = new Swap(want, network);
 
 // Derive the necessary public strings from privates.
 // Using the "have" library here but it could be either for this step.
@@ -166,6 +166,7 @@ switch (mode){
           myObject.secret
         );
         const swapTX = wantSwap.getRedeemTX(
+          network,
           sweepToAddr.address,
           feeRate,
           fundingTX,
@@ -258,6 +259,7 @@ switch (mode){
           revealedSecret
         );
         const swapTX = wantSwap.getRedeemTX(
+          network,
           sweepToAddr.address,
           feeRate,
           fundingTX,

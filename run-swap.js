@@ -166,7 +166,6 @@ switch (mode){
           myObject.secret
         );
         const swapTX = wantSwap.getRedeemTX(
-          network,
           sweepToAddr.address,
           feeRate,
           fundingTX,
@@ -259,7 +258,6 @@ switch (mode){
           revealedSecret
         );
         const swapTX = wantSwap.getRedeemTX(
-          network,
           sweepToAddr.address,
           feeRate,
           fundingTX,

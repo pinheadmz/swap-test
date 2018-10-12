@@ -206,10 +206,10 @@ class Swap {
     const coin = this.Coin.fromTX(fundingTX, fundingTXoutput, -1);
     privateKey = ensureBuffer(privateKey);
 
-   if (typeof address !== 'string')
-      address = address.toString()
-
-    redeemTX.addOutput(address, coin.value - fee);
+    redeemTX.addOutput({
+      address: address,
+      value: coin.value - fee
+    });
     redeemTX.addCoin(coin);
     redeemTX.inputs[0].script = inputScript;
     if (locktime)
@@ -236,7 +236,7 @@ class Swap {
 
     inputScript.setData(0, sig);
     inputScript.compile();
-console.log(redeemTX);
+
     return redeemTX;
   }
 

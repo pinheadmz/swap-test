@@ -15,24 +15,9 @@ const bcrypto = require('bcrypto');
 
 class Swap {
   constructor(lib, network){
+    this.libName = lib;
     this.lib = require(lib);
     this.lib.Network.set(network);
-/*
-    const {
-      Outpoint,
-      Coin,
-      MTX,
-      TX,
-      Address,
-      hd,
-      KeyRing,
-      Script,
-      Stack,
-      consensus,
-      util
-    } = require(lib);
-*/
-
 
     this.Outpoint = this.lib.Outpoint;
     this.Coin = this.lib.Coin;
@@ -219,7 +204,7 @@ class Swap {
 
     let version_or_flags = 0;
     let type = null;
-    if (this.lib === 'bcash') {
+    if (this.libName === 'bcash') {
       version_or_flags = this.flags;
       type = this.Script.hashType.SIGHASH_FORKID | this.Script.hashType.ALL; 
     }

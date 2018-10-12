@@ -6,7 +6,7 @@
  */
 
 // set these for each test -------!!
-const lib = 'bcoin';    // bcoin, bcash
+const lib = 'bcash';    // bcoin, bcash
 const mode = 'refund';  // refund, swap
 // -------------------------------!!
 
@@ -52,7 +52,7 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
   );
 
   const addrFromScript = swap.getAddressFromRedeemScript(redeemScript);
-  const address = addrFromScript.toString(network);
+  address = addrFromScript.toString(network);
 
   console.log(
     'Swap P2SH scriptPubKey:\n',
@@ -78,7 +78,6 @@ switch (mode) {
     wallet.bind('confirmed', async (wallet, fundingTX) => {
       const refundScript = swap.getRefundInputScript(redeemScript);
       const refundTX = swap.getRedeemTX(
-        network,
         Timmy.address,
         2000,
         swap.TX.fromRaw(fundingTX.tx, 'hex'),
@@ -105,14 +104,25 @@ switch (mode) {
     break;
   }
   case 'swap': {
-    wallet.bind('tx', async (wallet, fundingTX) => {
-      console.log('Funding TX Received:\n', fundingTX);
+    wallet.bind('tx', async (wallet, txDetails) => {
+      // Get details from counterparty's TX
+      // TODO: check amount and wait for confirmation for safety
+      const fundingTX = swap.TX.fromRaw(txDetails.tx, 'hex');
+      const fundingTXoutput = swap.extractOutput(
+        fundingTX,
+        address
+      );
+      if (!fundingTXoutput) {
+        console.log('TX received from unrecognized address');
+        return;
+      } else {
+        console.log('Funding TX output:\n', fundingTXoutput);
+      }
       const swapScript = swap.getSwapInputScript(redeemScript, secret.secret);
       const swapTX = swap.getRedeemTX(
-        network,
         Chris.address,
         2000,
-        swap.TX.fromRaw(fundingTX.tx, 'hex'),
+        fundingTX,
         0,
         redeemScript,
         swapScript,

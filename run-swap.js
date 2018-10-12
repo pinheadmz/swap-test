@@ -152,8 +152,7 @@ switch (mode){
         const fundingTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
         const fundingOutput = wantSwap.extractOutput(
           fundingTX,
-          wantAddress,
-          network
+          wantAddress
         );
         console.log(want + ' funding TX output:\n', fundingOutput);
 
@@ -209,10 +208,14 @@ switch (mode){
         const startTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
         const startTXoutput = wantSwap.extractOutput(
           startTX,
-          wantAddress,
-          network
+          wantAddress
         );
-        console.log(want + ' funding TX output:\n', startTXoutput);
+        if (!startTXoutput) {
+          console.log(want + ' TX received from unrecognized address');
+          return;
+        } else {
+          console.log(want + ' funding TX output:\n', startTXoutput);
+        }
 
         // SEND COINS! Fund swap address from primary wallet and report
         const haveFundingWallet = haveWallet.wallet(walletID);
@@ -231,11 +234,10 @@ switch (mode){
         
         const revealedSecret = haveSwap.extractSecret(
           fundingTX,
-          haveAddress,
-          network
+          haveAddress
         );
         if (!revealedSecret){
-          console.log(have + ' TX received with unrecognized output')
+          console.log(have + ' TX received with unrecognized output');
           return;
         } else {
           console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
@@ -244,8 +246,7 @@ switch (mode){
 
         const fundingOutput = haveSwap.extractOutput(
           fundingTX,
-          haveAddress,
-          network
+          haveAddress
         );
         console.log(have + ' funding TX output:\n', fundingOutput);
 

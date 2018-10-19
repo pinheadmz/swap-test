@@ -57,7 +57,7 @@ if (myObject.secret.length !== 64)
   err ('Bad mine: secret size');  
 
 if (typeof theirObject.publicKey !== 'string'
-    || typeof theirObject.hash) !== 'string') {
+    || typeof theirObject.hash !== 'string') {
   err ('Bad theirs');
 }
 
@@ -141,12 +141,11 @@ switch (mode){
         passphrase: passphrase,
         outputs: [{ value: amount, address: haveAddress }]
       });
-      console.log(have + ' swap-funding TX sent:\n', fundingTX.hash);
+      console.log(have + ' funding TX sent:\n', fundingTX.hash);
+      console.log('...with HTLC secret:\n', myObject.secret);
 
       // Wait for counterparty TX and sweep it, using our hash's SECRET
       wantWallet.bind('tx', async (wallet, txDetails) => {
-        console.log(want + ' funding TX Received:\n', txDetails.hash);
-
         // Get details from counterparty's TX
         // TODO: check amount and wait for confirmation for safety
         const fundingTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
@@ -154,7 +153,13 @@ switch (mode){
           fundingTX,
           wantAddress
         );
-        console.log(want + ' funding TX output:\n', fundingOutput);
+        if (!fundingOutput) {
+          console.log(want + ' swap-sweep TX received');
+          return;
+        } else {
+          console.log(want + ' funding TX received:\n', txDetails.hash);
+          console.log(want + ' funding TX output:\n', fundingOutput);
+        }
 
         // Create a TX on "want" chain to sweep counterparty's output
         const wantReceivingWallet = wantWallet.wallet(walletID);
@@ -199,21 +204,23 @@ switch (mode){
         haveAddress
       } = await createHTLC(theirObject.hash, swapTime, cancelTime);
 
+      let startTX = null;
+      let startTXoutput = null;
+
       // Wait for counterparty TX before posting our own
       wantWallet.bind('tx', async (wallet, txDetails) => {
-        console.log(want + ' funding TX Received:\n', txDetails.hash);
-
         // Get details from counterparty's TX
         // TODO: check amount and wait for confirmation for safety
-        const startTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
-        const startTXoutput = wantSwap.extractOutput(
+        startTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
+        startTXoutput = wantSwap.extractOutput(
           startTX,
           wantAddress
         );
         if (!startTXoutput) {
-          console.log(want + ' TX received from unrecognized address');
+          console.log(want + ' swap-sweep TX received');
           return;
         } else {
+          console.log(want + ' funding TX received:\n', txDetails.hash);
           console.log(want + ' funding TX output:\n', startTXoutput);
         }
 
@@ -223,7 +230,7 @@ switch (mode){
           passphrase: passphrase,
           outputs: [{ value: amount, address: haveAddress }]
         });
-        console.log(have + ' swap-funding TX Sent:\n', fundingTX.hash);
+        console.log(have + ' funding TX sent:\n', fundingTX.hash);
       });
 
       // Watch our own "have" TX and wait for counterparty to sweep it
@@ -237,18 +244,12 @@ switch (mode){
           haveAddress
         );
         if (!revealedSecret){
-          console.log(have + ' TX received with unrecognized output');
+          console.log(have + ' funding TX received');
           return;
         } else {
-          console.log(have + ' swap-sweep TX Received:\n', txDetails.hash);
+          console.log(have + ' swap-sweep TX received:\n', txDetails.hash);
+          console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
         }
-        console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
-
-        const fundingOutput = haveSwap.extractOutput(
-          fundingTX,
-          haveAddress
-        );
-        console.log(have + ' funding TX output:\n', fundingOutput);
 
         // Create a TX on "want" chain to sweep counterparty's output
         const wantReceivingWallet = wantWallet.wallet(walletID);
@@ -261,8 +262,8 @@ switch (mode){
         const swapTX = wantSwap.getRedeemTX(
           sweepToAddr.address,
           feeRate,
-          fundingTX,
-          fundingOutput.index,
+          startTX,
+          startTXoutput.index,
           wantRedeemScript,
           swapScript,
           null,

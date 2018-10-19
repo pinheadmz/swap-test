@@ -5,7 +5,7 @@
 const {base58} = require('bstring');
 const Swap = require('./swap');
 
-const swap = new Swap('bcoin');  // could be any library for this step
+const swap = new Swap('bcoin', 'testnet');  // could be any library for this step
 const secret = swap.getSecret();
 const keys = swap.getKeyPair();
 

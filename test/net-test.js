@@ -80,6 +80,7 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
   const watchWalletInfo = await watchWallet.getInfo();
   console.log('Watch-only wallet created:\n', watchWalletInfo);
 
+  await client.open();
   await wallet.open();
   await wallet.join(walletName, watchWalletInfo.token);
 })();
@@ -87,6 +88,12 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
 switch (mode) {
   case 'refund': {
     wallet.bind('confirmed', async (wallet, fundingTX) => {
+
+      const confBlock = fundingTX.block;
+      const confBlockHeader = await client.execute('getblockheader', [confBlock, 1]);
+      const confTime = confBlockHeader.mediantime;
+      const minRedeemTime = confTime + CLTV_LOCKTIME;
+
       const refundScript = swap.getRefundInputScript(redeemScript);
       const refundTX = swap.getRedeemTX(
         Timmy.address,
@@ -102,15 +109,28 @@ switch (mode) {
       const finalTX = refundTX.toTX();
       const stringTX = finalTX.toRaw().toString('hex');
 
-      console.log('Refund TX:\n', finalTX);
+      console.log('Funding confirmed, refund TX:\n', finalTX);
 
-      // this requires timeout to be HUUUUGE in brq/lib/request.js
-      // wait twenty minutes and try again
-      console.log('Waiting 20 minutes...')
-      setTimeout(async () => {
-        const broadcastResult2 = await client.broadcast(stringTX);
-        console.log('Broadcast TX 20 min later: ', broadcastResult2);
-      }, 60 * 20 * 1000);
+      // wait twenty network minutes and broadcast
+      console.log('Waiting for locktime to expire: ', swap.util.date(minRedeemTime))
+
+      client.bind('chain connect', async (block) => {
+        const blockEntry = swap.ChainEntry.fromRaw(block);
+        const blockHash = blockEntry.rhash();
+        const blockHeader = await client.execute('getblockheader', [blockHash, 1]);
+        const mtp = blockHeader.mediantime;
+
+        if (mtp >= minRedeemTime){
+          const broadcastResult = await client.broadcast(stringTX);
+          console.log('Timelock expired, broadcasting TX:\n', broadcastResult);
+          process.exit();
+        } else {
+          console.log(
+            "Block received, timelock not expired. Current time: ",
+            swap.util.date(mtp)
+          );
+        }
+      });
     });
     break;
   }
@@ -149,6 +169,7 @@ switch (mode) {
       const broadcastResult = await client.broadcast(stringTX);
 
       console.log('Broadcast TX: ', broadcastResult);
+      process.exit();
     });
     break;
   }

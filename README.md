@@ -42,6 +42,9 @@ $ cp conf/bcoin-testnet-wallet.conf ~/.bcoin/testnet/wallet.conf
 
 The app and tests are hard-coded with specific port numbers so be sure to configure correctly!
 
+NOTE: At this time, [a small update to bcash](https://github.com/bcoin-org/bcash/pull/92/files)
+is pending and these configuration files will not work until it is merged, or manually updated.
+
 ## Testing
 
 ### Library test
@@ -84,9 +87,8 @@ Swap P2SH address:
 
 Sending any amount of coins to this address should trigger an event repsonse which
 sweeps the funds using the specified branch of the HTLC. Note that the `refund` mode
-redeems a realtive timelock output (CSV) and it won't work unless the timeout in
-`brq/lib/request.js` is HUUUUGE! The script will actually wait for twenty minutes before
-attempting to redeem the output.
+redeems a realtive timelock output (CSV) and the test will **actually wait** 20 minutes before sending
+the redeem transaction!
 
 ## App
 

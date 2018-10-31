@@ -2,7 +2,7 @@
  * Tests all the swap.js functions against multiple blockchain libraries.
  */
 
-const Swap = require('./swap');
+const Swap = require('../lib/swap');
 const network = 'testnet';
 
 function testSwapLib(lib, network) {

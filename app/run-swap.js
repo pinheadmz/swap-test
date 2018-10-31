@@ -5,10 +5,9 @@
 
 // Requirements
 const {NodeClient, WalletClient} = require('bclient');
-const {BloomFilter} = require('bfilter');
 const {base58} = require('bstring');
 const Config = require('bcfg');
-const Swap = require('./swap');
+const Swap = require('../lib/swap');
 
 // Load command line arguments
 const config = new Config('bswap'); // some module name required but we ignore
@@ -54,7 +53,7 @@ if (myObject.privateKey.length !== 64)
   err ('Bad mine: privateKey size');
 
 if (myObject.secret.length !== 64)
-  err ('Bad mine: secret size');  
+  err ('Bad mine: secret size');
 
 if (typeof theirObject.publicKey !== 'string'
     || typeof theirObject.hash !== 'string') {
@@ -238,7 +237,7 @@ switch (mode){
         // Get details from counterparty's TX
         // TODO: check amount and wait for confirmation for safety
         const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
-        
+
         const revealedSecret = haveSwap.extractSecret(
           fundingTX,
           haveAddress
@@ -297,7 +296,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
     haveSwap.getAddressFromRedeemScript(haveRedeemScript);
   const haveAddress = haveAddrFromScript.toString(network);
   console.log(have + ' P2SH address:\n', haveAddress);
-  
+
   // create a watch-only wallet in case we need to self-refund
   // TODO: if wallet already exists, that's ok
   const haveWalletName = haveSwap.nameWallet(haveAddress);

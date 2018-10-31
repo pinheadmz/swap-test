@@ -1,0 +1,29 @@
+{
+  "name": "bswap",
+  "version": "0.0.1",
+  "description": "Cross-chain atomic swaps",
+  "main": "swap.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pinheadmz/swap-test.git"
+  },
+  "author": "Matthew Zipkin",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pinheadmz/swap-test/issues"
+  },
+  "homepage": "https://github.com/pinheadmz/swap-test#readme",
+  "dependencies": {
+    "bcfg": "^0.1.3",
+    "bclient": "^0.1.4",
+    "bcrypto": "^2.0.0",
+    "bstring": "^0.3.0"
+  },
+  "peerDependencies": {
+    "bcash": "^1.0.2",
+    "bcoin": "^1.0.2"
+  }
+}

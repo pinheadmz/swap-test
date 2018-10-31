@@ -5,18 +5,29 @@
  * with the specified redeem transaction, all on one chain only.
  */
 
-// set these for each test -------!!
-const lib = 'bcash';    // bcoin, bcash
-const mode = 'refund';  // refund, swap
-// -------------------------------!!
-
 const {NodeClient, WalletClient} = require('bclient');
-const {BloomFilter} = require('bfilter');
-const Swap = require('./swap');
+const Swap = require('../lib/swap');
+const Config = require('bcfg');
 const network = 'testnet';
 
-const swap = new Swap(lib, network);
+// Load command line arguments
+const config = new Config('bswap'); // some module name required but we ignore
+config.load({argv: true});
 
+// Required arguments
+const lib = config.str('lib');
+const mode = config.str('mode');
+
+// Quick usage check
+if (!['bcoin', 'bcash'].includes(lib) ||
+    !['swap', 'refund'].includes(mode)) {
+  console.log(
+    "Usage: $ node test/net-test.js --lib=<bcoin|bcash> --mode=<swap|refund>"
+    );
+  process.exit();
+}
+
+const swap = new Swap(lib, network);
 const nodePort = (lib == 'bcoin') ? 18332 : 18032;
 const walletPort = (lib == 'bcoin') ? 18334 : 18034;
 

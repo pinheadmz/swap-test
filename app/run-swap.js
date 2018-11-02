@@ -353,7 +353,13 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
   await wantWallet.join(wantWalletName, watchWalletInfo.token);
   console.log(watchWalletInfo.id);
 
-  // send back the addresses, used by the modes differently
+  // Just in case we're "late" check last 100 blocks
+  console.log(have + ' checking last 100 blocks for transactions');
+  await rescan100(haveClient, haveWallet);
+  console.log(want + ' checking last 100 blocks for transactions');
+  await rescan100(wantClient, wantWallet);
+
+  // Send back the addresses, used by the modes differently
   return {
     wantRedeemScript: wantRedeemScript,
     haveRedeemScript: haveRedeemScript,
@@ -361,6 +367,27 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
     haveAddress: haveAddress
   }
 };
+
+async function isSPV(nodeClient){
+  try {
+    const blockByHeight = await nodeClient.getBlock(0);
+  } catch (e) {
+    return true;
+  }
+  return false;
+}
+
+async function rescan100(nodeClient, walletClient){
+  const spv = await isSPV(nodeClient);
+  const info = await nodeClient.getInfo();
+  const height = info.chain.height - 100;
+
+  // rescan won't work in SPV mode
+  if (spv)
+    await nodeClient.reset(height);
+  else
+    await walletClient.rescan(height);
+}
 
 function err(msg){
   console.log(msg);

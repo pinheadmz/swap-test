@@ -50,6 +50,8 @@ const Chris = swap.getKeyPair();
 let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
 
 (async () => {
+  console.log('Is this an SPV node?\n', await isSPV(client));
+
   CLTV_LOCKTIME = 60 * 10; // can't spend redeem until ten minutes pass
   TX_nSEQUENCE = 60 * 10;  // minimum height the funding tx can be mined
 
@@ -173,4 +175,13 @@ switch (mode) {
     });
     break;
   }
+}
+
+async function isSPV(nodeClient){
+  try {
+    const blockByHeight = await nodeClient.getBlock(0);
+  } catch (e) {
+    return true;
+  }
+  return false;
 }

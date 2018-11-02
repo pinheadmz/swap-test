@@ -40,7 +40,8 @@ $ cp conf/bcoin.conf ~/.bcash/bcoin.conf
 $ cp conf/bcoin-testnet-wallet.conf ~/.bcoin/testnet/wallet.conf
 ```
 
-The app and tests are hard-coded with specific port numbers so be sure to configure correctly!
+The app and tests are hard-coded for `testnet` and specific non-default port numbers so be
+sure to configure correctly!
 
 NOTE: At this time, [a small update to bcash](https://github.com/bcoin-org/bcash/pull/92/files)
 is pending and these configuration files will not work until it is merged, or manually updated.
@@ -77,7 +78,7 @@ bcoin or bcash must be running and already synced to the network.
 $ node test/net-test.js --lib=<bcoin|bcash> --mode=<swap|refund>
 ```
 
-This test will connect to your running node (full, pruned or SPV), create a HTLC redeem script
+This test will connect to your running node (full, pruned or SPV), create an HTLC redeem script
 and a watch-only wallet, then provide the user with a P2SH address:
 
 ```

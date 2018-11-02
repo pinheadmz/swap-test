@@ -247,7 +247,10 @@ switch (mode){
           return;
         } else {
           console.log(have + ' swap-sweep TX received:\n', txDetails.hash);
-          console.log(have + ' swap-sweep TX secret revealed:\n', revealedSecret);
+          console.log(
+            have + ' swap-sweep TX secret revealed:\n',
+            revealedSecret
+          );
         }
 
         // Create a TX on "want" chain to sweep counterparty's output
@@ -284,6 +287,7 @@ switch (mode){
 }
 
 async function createHTLC(hash, haveTimelock, wantTimelock) {
+  // *** HAVE ***
   // Build the "have" P2SH address with the HTLC script and LONG timelock
   const haveRedeemScript = haveSwap.getRedeemScript(
     hash,
@@ -291,22 +295,32 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
     theirObject.publicKey,
     haveTimelock
   );
-
   const haveAddrFromScript =
     haveSwap.getAddressFromRedeemScript(haveRedeemScript);
   const haveAddress = haveAddrFromScript.toString(network);
   console.log(have + ' P2SH address:\n', haveAddress);
 
-  // create a watch-only wallet in case we need to self-refund
-  // TODO: if wallet already exists, that's ok
+  // Get the watch-only wallet in case we need to self-refund
   const haveWalletName = haveSwap.nameWallet(haveAddress);
-  await haveWallet.createWallet(haveWalletName, {watchOnly: true});
   const haveWatchWallet = haveWallet.wallet(haveWalletName);
-  await haveWatchWallet.importAddress('default', haveAddress);
-  const haveWalletInfo = await haveWatchWallet.getInfo();
-  await haveWallet.join(haveWalletName, haveWalletInfo.token);
-  console.log(have + ' watch-only wallet created:\n', haveWalletInfo.id);
+  let haveWalletInfo = await haveWatchWallet.getInfo();
 
+  // Create if doesn't already exist
+  if (!haveWalletInfo) {
+    console.log(have + ' watch-only wallet created:');
+    haveWalletInfo =
+      await haveWallet.createWallet(haveWalletName, {watchOnly: true});
+    // Import address to watch
+    await haveWatchWallet.importAddress('default', haveAddress);
+  } else {
+    console.log(have + ' watch-only wallet exists:');
+  }
+
+  // Listen for events
+  await haveWallet.join(haveWalletName, haveWalletInfo.token);
+  console.log(haveWalletInfo.id);
+
+  // *** WANT ***
   // Build the "want" P2SH address with HTLC and SHORT timelock
   const wantRedeemScript = wantSwap.getRedeemScript(
     hash,
@@ -319,15 +333,25 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
   const wantAddress = wantAddrFromScript.toString(network);
   console.log(want + ' P2SH address:\n', wantAddress);
 
-  // create a watch-only wallet to catch counterparty's side of the trade
-  // TODO: if wallet already exists, that's ok
+  // Get the watch-only wallet to catch counterparty's side of the trade
   const wantWalletName = wantSwap.nameWallet(wantAddress);
-  await wantWallet.createWallet(wantWalletName, {watchOnly: true});
   const wantWatchWallet = wantWallet.wallet(wantWalletName);
-  await wantWatchWallet.importAddress('default', wantAddress);
-  const watchWalletInfo = await wantWatchWallet.getInfo();
+  let watchWalletInfo = await wantWatchWallet.getInfo();
+
+  // Create if it doesn't already exist
+  if (!watchWalletInfo){
+    console.log(want + ' watch-only wallet created:');
+    watchWalletInfo =
+      await wantWallet.createWallet(wantWalletName, {watchOnly: true});
+    // Import address to watch
+    await wantWatchWallet.importAddress('default', wantAddress);
+  } else {
+    console.log(want + ' watch-only wallet exists:');
+  }
+
+  // Listen for events
   await wantWallet.join(wantWalletName, watchWalletInfo.token);
-  console.log(want + ' watch-only wallet created:\n', watchWalletInfo.id);
+  console.log(watchWalletInfo.id);
 
   // send back the addresses, used by the modes differently
   return {

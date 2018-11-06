@@ -43,6 +43,14 @@ $ cp conf/bcoin-testnet-wallet.conf ~/.bcoin/testnet/wallet.conf
 The app and tests are hard-coded for `testnet` and specific non-default port numbers so be
 sure to configure correctly!
 
+### http ports:
+```
+bcoin node:   18332 # default for testnet
+bcoin wallet: 18334 # default for testnet
+bcash node:   18032
+bcash wallet: 18034
+```
+
 NOTE: At this time, [a small update to bcash](https://github.com/bcoin-org/bcash/pull/92/files)
 is pending and these configuration files will not work until it is merged, or manually updated.
 

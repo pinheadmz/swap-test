@@ -358,7 +358,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
 
   // Listen for events
   await haveWallet.join(haveWalletName, haveWalletInfo.token);
-  console.log(haveWalletInfo.id);
+  console.log(' ' + haveWalletInfo.id);
 
   // *** WANT ***
   // Build the "want" P2SH address with HTLC and SHORT timelock
@@ -391,7 +391,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
 
   // Listen for events
   await wantWallet.join(wantWalletName, watchWalletInfo.token);
-  console.log(watchWalletInfo.id);
+  console.log(' ' + watchWalletInfo.id);
 
   // Send back the addresses, used by the modes differently
   return {

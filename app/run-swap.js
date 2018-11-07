@@ -120,10 +120,12 @@ const wantWallet = new WalletClient({
   apiKey: 'api-key'
 });
 
-// open wallet DBs
+// open wallet and node sockets
 (async () => {
   wantWallet.open();
   haveWallet.open();
+  wantClient.open();
+  haveClient.open();
 })();
 
 switch (mode){
@@ -150,6 +152,7 @@ switch (mode){
       }
 
       // SEND COINS! Fund swap address from primary wallet and report
+      // TODO: check if  this was already sent in a previous run
       const haveFundingWallet = haveWallet.wallet(walletID);
       const fundingTX = await haveFundingWallet.send({
         passphrase: passphrase,

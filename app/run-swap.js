@@ -8,6 +8,7 @@ const {NodeClient, WalletClient} = require('bclient');
 const {base58} = require('bstring');
 const Config = require('bcfg');
 const Swap = require('../lib/swap');
+const Xrate = require('../lib/xrate');
 
 // Load command line arguments
 const config = new Config('bswap'); // some module name required but we ignore
@@ -30,6 +31,7 @@ const cancelTime = config.uint('cancel-time', 60 * 60 * 24); // 1 day to cancel
 const feeRate = config.uint('rate', 1000);
 const network = config.str('network', 'testnet');
 const refund = config.bool('refund', false);
+const tolerance = 0.05 // 5% tolerance allowed on exchange rate 
 
 // Quick usage check
 if (!mine || !theirs || !have || !want || !mode || !amount)
@@ -152,7 +154,7 @@ switch (mode){
       }
 
       // SEND COINS! Fund swap address from primary wallet and report
-      // TODO: check if  this was already sent in a previous run
+      // TODO: check if this was already sent in a previous run
       const haveFundingWallet = haveWallet.wallet(walletID);
       const fundingTX = await haveFundingWallet.send({
         passphrase: passphrase,
@@ -164,7 +166,6 @@ switch (mode){
       // Wait for counterparty TX and sweep it, using our hash's SECRET
       wantWallet.bind('confirmed', async (wallet, txDetails) => {
         // Get details from counterparty's TX
-        // TODO: check amount
         // TODO: check counterparty hasn't already refunded
         const fundingTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
         const fundingOutput = wantSwap.extractOutput(
@@ -177,6 +178,22 @@ switch (mode){
         } else {
           console.log(want + ' funding TX confirmed:\n', txDetails.hash);
           console.log(want + ' funding TX output:\n', fundingOutput);
+        }
+
+        // Check counterparty's amount and exchange rate
+        const xrate = new Xrate({
+          have: have,
+          want: want,
+          receivedAmount: fundingOutput.amount
+        });
+        const swapAmt = await xrate.getSwapAmt();
+        const xRateErr = Math.abs(amount - swapAmt) / amount;
+        if (tolerance < xRateErr) {
+          console.log(
+            'Counterparty sent wrong amount.\n' +
+            'Waiting for new tx (or ctrl+c and --refund)'
+          );
+          return;
         }
 
         // Create a TX on "want" chain to sweep counterparty's output
@@ -245,7 +262,6 @@ switch (mode){
       // Wait for counterparty TX before posting our own
       wantWallet.bind('confirmed', async (wallet, txDetails) => {
         // Get details from counterparty's TX
-        // TODO: check amount
         // TODO: check counterparty hasn't already refunded
         startTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
         startTXoutput = wantSwap.extractOutput(
@@ -260,6 +276,22 @@ switch (mode){
           console.log(want + ' funding TX output:\n', startTXoutput);
         }
 
+        // Check counterparty's amount and exchange rate
+        const xrate = new Xrate({
+          have: have,
+          want: want,
+          receivedAmount: startTXoutput.amount
+        });
+        const swapAmt = await xrate.getSwapAmt();
+        const xRateErr = Math.abs(amount - swapAmt) / amount;
+        if (tolerance < xRateErr) {
+          console.log(
+            'Counterparty sent wrong amount.\n' +
+            'Waiting for new tx (or ctrl+c and --refund)'
+          );
+          return;
+        }
+
         // SEND COINS! Fund swap address from primary wallet and report
         const haveFundingWallet = haveWallet.wallet(walletID);
         const fundingTX = await haveFundingWallet.send({
@@ -272,7 +304,6 @@ switch (mode){
       // Watch our own "have" TX and wait for counterparty to sweep it
       haveWallet.bind('confirmed', async (wallet, txDetails) => {
         // Get details from counterparty's TX
-        // TODO: check amount and wait for confirmation for safety
         const fundingTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
 
         const revealedSecret = haveSwap.extractSecret(

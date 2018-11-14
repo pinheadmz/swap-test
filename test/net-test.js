@@ -7,6 +7,7 @@
 
 const {NodeClient, WalletClient} = require('bclient');
 const Swap = require('../lib/swap');
+const Xrate = require('../lib/xrate');
 const Config = require('bcfg');
 const network = 'testnet';
 
@@ -137,9 +138,8 @@ switch (mode) {
     break;
   }
   case 'swap': {
-    wallet.bind('tx', async (wallet, txDetails) => {
+    wallet.bind('confirmed', async (wallet, txDetails) => {
       // Get details from counterparty's TX
-      // TODO: check amount and wait for confirmation for safety
       const fundingTX = swap.TX.fromRaw(txDetails.tx, 'hex');
       const fundingTXoutput = swap.extractOutput(
         fundingTX,
@@ -151,6 +151,21 @@ switch (mode) {
       } else {
         console.log('Funding TX output:\n', fundingTXoutput);
       }
+
+      const want = lib;
+      const have = lib === 'bcoin' ? 'bcash' : 'bcoin';
+      const xrate = new Xrate({
+        have: have,
+        want: want,
+        receivedAmount: fundingTXoutput.amount
+      });
+      const swapAmt = await xrate.getSwapAmt();
+      console.log(
+        'Exchange rate:\n  ' +
+        want + ' received:   ' + fundingTXoutput.amount + '\n  ' +
+        have + ' would send: ' + swapAmt
+      );
+
       const swapScript = swap.getSwapInputScript(redeemScript, secret.secret);
       const swapTX = swap.getRedeemTX(
         Chris.address,

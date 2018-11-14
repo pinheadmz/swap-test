@@ -148,7 +148,7 @@ switch (mode){
           haveAddress,
           haveRedeemScript,
           haveWatchWallet,
-          swapTime
+          cancelTime
         );
         return;
       }

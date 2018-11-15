@@ -1,11 +1,11 @@
-/*
+/**
  * Create parameters for swap
  */
 
 const {base58} = require('bstring');
 const Swap = require('../lib/swap');
 
-const swap = new Swap('bcoin', 'testnet');  // could be any library for this step
+const swap = new Swap('bcoin', 'testnet');  // could be any library for this
 const secret = swap.getSecret();
 const keys = swap.getKeyPair();
 
@@ -18,6 +18,7 @@ const priv = {
   privateKey: keys.privateKey.toString('hex'),
 };
 
+// encode JSON objects into base58 strings for easy copy+paste
 const pubBase58 = base58.encode(new Buffer(JSON.stringify(pub)));
 const privBase58 = base58.encode(new Buffer(JSON.stringify(priv)));
 

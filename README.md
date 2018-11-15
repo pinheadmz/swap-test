@@ -3,8 +3,6 @@
 This project was written as the basis for an educational guide at
 [https://bcoin.io/guides/swaps](https://bcoin.io/guides/swaps).
 
-The guide is far more detailed regarding usage than this README.
-
 It is not private or secure! Use at your own risk.
 
 ---
@@ -54,6 +52,21 @@ bcash wallet: 18034
 NOTE: At this time, [a small update to bcash](https://github.com/bcoin-org/bcash/pull/92/files)
 is pending and these configuration files will not work until it is merged, or manually updated.
 
+### Launching nodes
+
+This should work with any type of node (Full, Pruned, or SPV). Once configuration above is complete,
+start both nodes:
+```
+bcoin --spv --daemon
+bcash --spv --daemon
+```
+
+To interact with the nodes in this configuration, remember to pass the port number:
+```
+# to getinfo from bcash node
+bcoin-cli --http-port=18032 --api-key=api-key info
+```
+
 ## Testing
 
 ### Library test
@@ -101,7 +114,7 @@ the redeem transaction!
 
 ## App
 
-**This is merely a proof-of-concept and should not be used in production without modifications to the security and pirvacy of the protocol**
+**This is merely a proof-of-concept and should not be used in production without modifications to the security and pirvacy of the protocol. Pull requests are welcome!**
 
 Alice has Bitcoin Cash and wants Bitcoin. Bob has Bitcoin and wants Bitcoin Cash.
 
@@ -122,18 +135,18 @@ Alice runs `app/run-swap.js` and passes in several parameters:
 * `--amount` the amount of BCH in satoshis Alice wants to trade
 
 This action will create a P2SH address for both chains, and watch-only wallets on both chains.
-It will also fund the BTC address with the amount Alice has specified.
+It will also fund the BCH address with the amount Alice has specified.
 
 Meanwhile, Bob also runs `run-swap` with a few differences:
 
-* `--mine` and `--theirs` are his and Alice's info, respectively
+* `--mine` and `--theirs` are his and Alice's private and public info, respectively
 
 * `--have=bcoin --want=bcash --mode=swap`
 
-* `--amount` in this case sets the amount of BTC in satoshis Bob wants to trade.
+* `--amount` sets the amount of BTC in satoshis Bob wants to trade.
 
 Bob's app will also create P2SH addresses and watch-only wallets. When Alice's first transaction on
-BCH is confirmed, Bob's app will verify the amount against his maximum and the exchange rate, and then
+BCH is confirmed, Bob's app will verify the amount against the Coinbase BCH-BTC exchange rate, and then
 fund the P2SH address on the BTC chain.
 
 When Bob's BTC transaction is confirmed, Alice's app will sweep it, revealing the HTLC secret.
@@ -145,10 +158,39 @@ Either party can run the exact same `run-swap` command with the additional optio
 to cancel the swap. The app will wait until enough network time has passed before broadcasting the
 relative timelock refund transaction.
 
+### All run-swap options:
+
+| Parameter | Default | Description
+|-|-|-|
+| `mine` | (none) | The PRIVATE string returned by `prep-swap`
+| `theirs` | (none) | The PUBLIC string sent by counterparty
+| `have` | (none) | `bcoin` or `bcash`: the coin you have, to send to counterparty
+| `want` | (none) | `bcoin` or `bcash`: the coin you want, to receive from counterparty
+| `mode` | (none) | `start`: Creates HTLC secret and sends first transaction<br>`swap`: Sends second transaction and extracts HTLC secret for final swap redemption
+| `amount` | (none) | The amount (of coin you have) to send. In `swap` mode exchange rate will be checked before broadcasting transaction
+| `passphrase` | (none) | Wallet passphrase for funding HTLCs
+| `walletID` | `primary` | Wallet for funding-from and sweeping-to (both chains)
+| `walletAcct` | `default` | Wallet account for funding/sweeping to (both chains)
+| `swapTime` | 1 hour | Relative locktime (in seconds) to refund second swap tx (Bob in above example)
+| `cancelTime` | 1 day | Relative locktime (in seconds) to refund initial swap tx (Alice in above example)
+| `fee` | `1000` | Absolute fee in satoshis (not sat/B) for HTLC redemptions on both chains
+| `network` | `testnet` | Network for both chains
+| `refund` | `false` | Attempts to refund any eligible HTLC already confirmed in a previous run
+| `tolerance` | `0.05` | Using Coinbase BCH-BTC ticker, compare received amount on one chain to specified `amount` on other chain
 
 
+## TODO
 
-
-
+- [ ] Enable specification of parameters for different chains (walletID, passphrase)
+- [ ] Enable SegWit support for bcoin and hsd
+- [ ] Integrate hsd
+- [ ] Use smart fee calculation instead of set fee
+- [ ] More robust key/contract exchange, including intended swap amounts
+- [ ] In `start` mode, check if 1st tx has already been sent in a previous run
+- [ ] In both modes, check for counterparty refund before broadcasting anything
+- [ ] Refactor out lots of repeated code between modes
+- [ ] For refunds, sweep all outputs instead of refunding one at a time
+- [ ] Move global variables to an `options` object
+- [ ] Classify
 
 

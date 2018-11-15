@@ -3,6 +3,8 @@
  * WARNING: Running this script will send transactions and spend coins!
  */
 
+'use strict';
+
 // Requirements
 const {NodeClient, WalletClient} = require('bclient');
 const {base58} = require('bstring');
@@ -96,7 +98,7 @@ myObject.hash = haveSwap.getSecret(myObject.secret).hash;
 const ports = {
   bcoin: {nodePort: 18332, walletPort: 18334},
   bcash: {nodePort: 18032, walletPort: 18034}
-}
+};
 
 const haveClient = new NodeClient({
   network: network,
@@ -130,7 +132,7 @@ const wantWallet = new WalletClient({
   haveClient.open();
 })();
 
-switch (mode){
+switch (mode) {
   // ** START ** Initiate the swap by funding the HTLC address on "have" chain
   case 'start': {
     (async () => {
@@ -144,7 +146,7 @@ switch (mode){
       } = await createHTLC(myObject.hash, cancelTime, swapTime);
 
       // Refund path
-      if (refund){
+      if (refund) {
         await getRefund(
           haveAddress,
           haveRedeemScript,
@@ -167,7 +169,6 @@ switch (mode){
 
       // Wait for counterparty TX and sweep it, using our hash's SECRET
       wantWallet.bind('confirmed', async (wallet, txDetails) => {
-
         // TODO: check for counterparty refund before revealing secret
         // Get details from counterparty's TX
         const wantFundingTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
@@ -205,7 +206,7 @@ switch (mode){
         // Create a TX on "want" chain to sweep counterparty's output
         // First, get a primary (or user-sepcified) wallet address to receive
         const wantReceivingWallet = wantWallet.wallet(walletID);
-        const sweepToAddr = 
+        const sweepToAddr =
           await wantReceivingWallet.createAddress(walletAcct);
 
         // Generate the input script and TX to redeem the HTLC
@@ -258,7 +259,7 @@ switch (mode){
       } = await createHTLC(theirObject.hash, swapTime, cancelTime);
 
       // Refund path
-      if (refund){
+      if (refund) {
         await getRefund(
           haveAddress,
           haveRedeemScript,
@@ -275,7 +276,6 @@ switch (mode){
 
       // Wait for counterparty TX before posting our own
       wantWallet.bind('confirmed', async (wallet, txDetails) => {
-
         // TODO: check for counterparty refund before sending anything
         // Get details from counterparty's TX
         startTX = wantSwap.TX.fromRaw(txDetails.tx, 'hex');
@@ -321,14 +321,13 @@ switch (mode){
 
       // Watch our own "have" TX and wait for counterparty to sweep it
       haveWallet.bind('confirmed', async (wallet, txDetails) => {
-
         // Get details from counterparty's TX
         const haveSwapTX = haveSwap.TX.fromRaw(txDetails.tx, 'hex');
         const revealedSecret = haveSwap.extractSecret(
           haveSwapTX,
           haveAddress
         );
-        if (!revealedSecret){
+        if (!revealedSecret) {
           // If haveSwapTX does not have the P2SH address in the input,
           // that means the address is in an output, meaning that this TX
           // is our own, funding the swap.
@@ -445,7 +444,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
   let watchWalletInfo = await wantWatchWallet.getInfo();
 
   // Create watch-only wallet it doesn't already exist
-  if (!watchWalletInfo){
+  if (!watchWalletInfo) {
     console.log(want + ' watch-only wallet created:');
     watchWalletInfo =
       await wantWallet.createWallet(wantWalletName, {watchOnly: true});
@@ -466,7 +465,7 @@ async function createHTLC(hash, haveTimelock, wantTimelock) {
     wantAddress: wantAddress,
     haveAddress: haveAddress,
     haveWatchWallet: haveWatchWallet
-  }
+  };
 };
 
 /**
@@ -486,7 +485,7 @@ async function getRefund(
   const txs = await haveWatchWallet.getHistory('default');
   let found = false;
   // TODO: sweep wallet with one big tx instead of one refund at a time
-  for (const tx of txs){
+  for (const tx of txs) {
     const fundingTX = haveSwap.TX.fromRaw(tx.tx, 'hex');
 
     // Check if the tx is a send or receive from the P2SH address
@@ -535,7 +534,7 @@ async function getRefund(
     const tipMTP = tipHeader.mediantime;
 
     // Check if time lock has already expired, if so: broadcast and we're done
-    if (tipMTP >= minRedeemTime){
+    if (tipMTP >= minRedeemTime) {
       const tipBroadcastResult = await haveClient.broadcast(stringTX);
       console.log('Timelock expired, broadcasting TX:\n', tipBroadcastResult);
       process.exit();
@@ -556,29 +555,29 @@ async function getRefund(
       const mtp = blockHeader.mediantime;
 
       // If time lock has expired, broadcast the refund TX and we're done
-      if (mtp >= minRedeemTime){
+      if (mtp >= minRedeemTime) {
         const broadcastResult = await haveClient.broadcast(stringTX);
         console.log('Timelock expired, broadcasting TX:\n', broadcastResult);
         process.exit();
       } else {
         console.log(
-          "Block received, but timelock not expired. Current time: ",
+          'Block received, but timelock not expired. Current time: ',
           haveSwap.util.date(mtp)
         );
       }
     });
   }
   if (!found)
-    err('No refundable tx found')
+    err('No refundable tx found');
 }
 
 /**
  * Determine if node is full/pruned or SPV
  */
 
-async function isSPV(nodeClient){
+async function isSPV(nodeClient) {
   try {
-    const blockByHeight = await nodeClient.getBlock(0);
+    await nodeClient.getBlock(0);
   } catch (e) {
     return true;
   }
@@ -589,7 +588,7 @@ async function isSPV(nodeClient){
  * Rescan last 100 blocks on full/prune node, or reset if SPV
  */
 
-async function rescan100(nodeClient, walletClient){
+async function rescan100(nodeClient, walletClient) {
   const spv = await isSPV(nodeClient);
   const info = await nodeClient.getInfo();
   const height = info.chain.height - 100;
@@ -606,7 +605,7 @@ async function rescan100(nodeClient, walletClient){
  * Utility for clean error output
  */
 
-function err(msg){
+function err(msg) {
   console.log(msg);
   process.exit();
 }

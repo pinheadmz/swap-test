@@ -2,18 +2,19 @@
  * Tests all the swap.js functions against multiple blockchain libraries.
  */
 
+'use strict';
+
 const Swap = require('../lib/swap');
 const network = 'testnet';
 
 function testSwapLib(lib, network) {
-  console.log('\n -- testing: ' + lib + ' on network: ' + network)
+  console.log('\n -- testing: ' + lib + ' on network: ' + network);
 
   // instantiate Swap object with selected library and network
   const swap = new Swap(lib, network);
 
   // set constants
   const hour = 60 * 60;
-  const day = hour * 24;
   const CSV_LOCKTIME = 1 * hour; // can't spend redeem until this time passes
   const TX_nSEQUENCE = 2 * hour; // minimum passed time before redeem tx valid
 
@@ -74,11 +75,11 @@ function testSwapLib(lib, network) {
   const extractedSecret = swap.extractSecret(swapTX, address);
   console.log('\nExtracted HTLC secret:\n', extractedSecret);
   // make sure we ended up with the same secret we started with
-  console.log('Secret match:\n', extractedSecret == secret.secret);
+  console.log('Secret match:\n', extractedSecret === secret.secret);
 }
 
 // Iterate through the supported libraries
 const libs = ['bcoin', 'bcash'];
-for (const lib of libs){
+for (const lib of libs) {
   testSwapLib(lib, network);
 }

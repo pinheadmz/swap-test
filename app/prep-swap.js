@@ -2,6 +2,8 @@
  * Create parameters for swap
  */
 
+'use strict';
+
 const {base58} = require('bstring');
 const Swap = require('../lib/swap');
 
@@ -15,7 +17,7 @@ const pub = {
 };
 const priv = {
   secret: secret.secret.toString('hex'),
-  privateKey: keys.privateKey.toString('hex'),
+  privateKey: keys.privateKey.toString('hex')
 };
 
 // encode JSON objects into base58 strings for easy copy+paste

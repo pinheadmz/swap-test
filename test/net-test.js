@@ -5,6 +5,8 @@
  * with the specified redeem transaction, all on one chain only.
  */
 
+ 'use strict';
+
 const {NodeClient, WalletClient} = require('bclient');
 const Swap = require('../lib/swap');
 const Xrate = require('../lib/xrate');
@@ -23,15 +25,15 @@ const mode = config.str('mode');
 if (!['bcoin', 'bcash'].includes(lib) ||
     !['swap', 'refund'].includes(mode)) {
   console.log(
-    "Usage: $ node test/net-test.js --lib=<bcoin|bcash> --mode=<swap|refund>"
+    'Usage: $ node test/net-test.js --lib=<bcoin|bcash> --mode=<swap|refund>'
     );
   process.exit();
 }
 
 // Instantiate Swap object and clients for node and wallet
 const swap = new Swap(lib, network);
-const nodePort = (lib == 'bcoin') ? 18332 : 18032;
-const walletPort = (lib == 'bcoin') ? 18334 : 18034;
+const nodePort = (lib === 'bcoin') ? 18332 : 18032;
+const walletPort = (lib === 'bcoin') ? 18334 : 18034;
 const client = new NodeClient({
   network: 'testnet',
   port: nodePort,
@@ -79,7 +81,7 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
   await wallet.createWallet(walletName, {watchOnly: true});
   const watchWallet = wallet.wallet(walletName);
   await watchWallet.importAddress('default', address);
-  
+
   // Get details of newly created wallet, specifically access token
   const watchWalletInfo = await watchWallet.getInfo();
   console.log('Watch-only wallet created:\n', watchWalletInfo);
@@ -92,14 +94,12 @@ let redeemScript, address, CLTV_LOCKTIME, TX_nSEQUENCE;
 
 // Add event listeners to wallet that react to tx confirmation depending on mode
 switch (mode) {
-
   /**
    * REFUND
    */
 
   case 'refund': {
     wallet.bind('confirmed', async (wallet, fundingTX) => {
-
       // Get network mean time from block that confirmed the tx
       const confBlock = fundingTX.block;
       const confBlockHeader = await client.execute(
@@ -144,14 +144,14 @@ switch (mode) {
         const mtp = blockHeader.mediantime;
 
         // Check if the update time is sufficient to broadcast the refund
-        if (mtp >= minRedeemTime){
+        if (mtp >= minRedeemTime) {
           // If the time lock has expired, broadcast refund and we're done
           const broadcastResult = await client.broadcast(stringTX);
           console.log('Timelock expired, broadcasting TX:\n', broadcastResult);
           process.exit();
         } else {
           console.log(
-            "Block received, timelock not expired. Current time: ",
+            'Block received, timelock not expired. Current time: ',
             swap.util.date(mtp)
           );
         }
@@ -166,7 +166,6 @@ switch (mode) {
 
   case 'swap': {
     wallet.bind('confirmed', async (wallet, txDetails) => {
-
       // Get details from counterparty's TX
       const fundingTX = swap.TX.fromRaw(txDetails.tx, 'hex');
       const fundingTXoutput = swap.extractOutput(
@@ -229,10 +228,9 @@ switch (mode) {
  * Utility - test that we can detect SPV for rescan / reset
  */
 
-
-async function isSPV(nodeClient){
+async function isSPV(nodeClient) {
   try {
-    const blockByHeight = await nodeClient.getBlock(0);
+    await nodeClient.getBlock(0);
   } catch (e) {
     return true;
   }
